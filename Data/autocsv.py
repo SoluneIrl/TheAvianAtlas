@@ -203,7 +203,7 @@ def rebuild_birds_csv():
 
     if empty_game_folders:
         print()
-        print("  Heads up — these game folders have no recognized image files, so")
+        print("  Heads up,these game folders have no recognized image files, so")
         print("  they won't appear in the collection. If they're genuinely birdless,")
         print("  add them to NO_BIRDS_GAMES in app.js; if not, double check the files:")
         for name in empty_game_folders:
