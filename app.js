@@ -39,7 +39,7 @@
         && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         let parallaxRAF = null;
         heroEl.addEventListener('mousemove', (e) => {
-            if (parallaxRAF) return; // a frame is already queued for this movement, skip
+            if (parallaxRAF) return;
             parallaxRAF = requestAnimationFrame(() => {
                 parallaxRAF = null;
                 const rect = heroEl.getBoundingClientRect();
