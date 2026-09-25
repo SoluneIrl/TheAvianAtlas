@@ -8,33 +8,15 @@ try:
 except ImportError:
     Image = None
 
-# Location of this Python file (lives in the "Data" folder)
 base_folder = os.path.dirname(os.path.abspath(__file__))
-
-# Project root is one level up from "Data"
 project_root = os.path.dirname(base_folder)
-
-# Only these are treated as image files — everything else (.DS_Store,
-# Thumbs.db, .txt notes, etc.) is skipped so junk files never end up as
-# bogus rows in either CSV.
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"}
-
-# Formats that get auto-converted to .webp before anything else runs.
-# GIF is left alone (animated GIFs need extra handling to stay animated as
-# webp) and SVG/BMP are left alone too since this is just about shrinking
-# the big photo-style assets.
 CONVERTIBLE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
-WEBP_QUALITY = 85  # 0-100. Lower = smaller files, more visible loss.
-
+WEBP_QUALITY = 85
 
 def convert_folder_images_to_webp(folder_path):
-    """Converts every .png/.jpg/.jpeg directly inside folder_path to .webp,
-    deleting the original once the conversion succeeds. Not recursive —
-    call it once per leaf folder that actually holds images.
-    Returns (converted_count, skipped_list)."""
     if Image is None or not os.path.isdir(folder_path):
         return 0, []
-
     converted = 0
     skipped = []
 
@@ -49,15 +31,11 @@ def convert_folder_images_to_webp(folder_path):
 
         webp_path = os.path.join(folder_path, base + ".webp")
         if os.path.exists(webp_path):
-            # Don't clobber an existing .webp with the same base name —
-            # flag it so it can be sorted out by hand instead.
             skipped.append(f"{filename} (a .webp with that name already exists)")
             continue
 
         try:
             with Image.open(file_path) as img:
-                # Keep transparency where the source has it; otherwise
-                # normalize to RGB so save() doesn't choke on weird modes.
                 if img.mode in ("RGBA", "LA") or (
                     img.mode == "P" and "transparency" in img.info
                 ):
@@ -69,8 +47,6 @@ def convert_folder_images_to_webp(folder_path):
             converted += 1
         except Exception as e:
             skipped.append(f"{filename} ({e})")
-            # Clean up a partial .webp so a failed conversion doesn't
-            # silently take priority over the still-intact original.
             if os.path.exists(webp_path):
                 try:
                     os.remove(webp_path)
@@ -79,20 +55,11 @@ def convert_folder_images_to_webp(folder_path):
 
     return converted, skipped
 
-
 def natural_sort_key(name):
-    # Splits a filename into text/number chunks so "Outro 2" sorts before
-    # "Outro 10" (plain alphabetical sorting would put "Outro 10" first,
-    # since "1" < "2" as characters).
     return [
         int(chunk) if chunk.isdigit() else chunk.lower()
         for chunk in re.split(r"(\d+)", name)
     ]
-
-
-# ============================================================
-# Birds.csv — rebuilt from scratch every run from Assets/Games
-# ============================================================
 
 def rebuild_birds_csv():
     games_folder = os.path.join(project_root, "Assets", "Games")
@@ -100,14 +67,6 @@ def rebuild_birds_csv():
     header = ["game", "id", "title", "image", "credit", "date"]
 
     def smart_capitalize(text):
-        # Capitalizes just the first *letter* of each space-separated word,
-        # leaving every other character exactly as it was in the filename.
-        # str.title() does two things this project doesn't want: it lowercases
-        # the rest of each word (so "CCC" becomes "Ccc"), and it treats any
-        # non-letter as a word boundary, including apostrophes (so "Fiona's"
-        # becomes "Fiona'S"). This only touches the first alphabetic character
-        # of each word — everything after it, and everything in words that
-        # start with a non-letter like "#3", is left untouched.
         words = text.split(" ")
         fixed_words = []
         for word in words:
@@ -118,9 +77,6 @@ def rebuild_birds_csv():
             fixed_words.append(word)
         return " ".join(fixed_words)
 
-    # --- Load any credits/dates that already exist in birds.csv, so a re-run doesn't wipe them ---
-    # Keyed by image path (most stable identifier), with a "game|title" fallback key
-    # in case a filename ever gets renamed slightly.
     existing_credits_by_image = {}
     existing_credits_by_game_title = {}
     existing_dates_by_image = {}
@@ -142,9 +98,6 @@ def rebuild_birds_csv():
                         existing_credits_by_image[image_key] = credit
                     existing_credits_by_game_title[game_title_key] = credit
 
-                # Older CSVs (from before this column existed) simply won't have
-                # a "date" value here, which is fine — it just means every row
-                # falls through to the file's own modified-on-disk date below.
                 date_value = (row.get("date") or "").strip()
                 if date_value:
                     if image_key:
@@ -172,12 +125,12 @@ def rebuild_birds_csv():
         print("Skipped rebuilding birds.csv.")
         return
 
-    # Get all game folders, sorted alphabetically
     game_folders = [
         folder
         for folder in os.listdir(games_folder)
         if os.path.isdir(os.path.join(games_folder, folder))
     ]
+
     game_folders.sort(key=str.lower)
 
     if Image is None:
@@ -256,25 +209,11 @@ def rebuild_birds_csv():
         for name in empty_game_folders:
             print(f"    - {name}")
 
-
-# ============================================================
-# dev.csv — existing rows kept as-is, new images just appended
-# ============================================================
-
 def update_dev_csv():
     dev_folder = os.path.join(project_root, "Assets", "Dev")
     csv_file = os.path.join(base_folder, "dev.csv")
     header = ["date", "text", "img"]
-
-    # Placeholder text dropped into new rows — dev.csv is meant to be hand-
-    # written (unlike birds.csv, there's no filename to derive a caption
-    # from), so this is just a flag to remind you to go fill it in.
     PLACEHOLDER_TEXT = "TODO: describe this update"
-
-    # dev.csv is hand-maintained: some rows have no image at all (text-only
-    # updates), and every existing row's text is something you wrote on
-    # purpose. This never rewrites or reorders those — it only ever
-    # *appends* a new row for an image it hasn't seen before.
     existing_rows = []
     known_images = set()
 
@@ -292,11 +231,6 @@ def update_dev_csv():
                     known_images.add(os.path.basename(img))
 
     converted, skipped = convert_folder_images_to_webp(dev_folder)
-
-    # If an existing hand-written row pointed at a PNG/JPG that just got
-    # converted, update that row's img to the new .webp filename instead of
-    # leaving it dangling (and instead of the file below being treated as
-    # "new" and getting its own duplicate placeholder row).
     if converted:
         for row in existing_rows:
             img_val = row[2]
@@ -358,8 +292,8 @@ def update_dev_csv():
 
     if not os.path.isdir(dev_folder):
         print()
-        print(f"  Heads up — couldn't find the folder: {dev_folder}")
-        print("  No image rows were added this run; existing rows were left as-is.")
+        print(f"  Heads up, couldn't find the folder: {dev_folder}")
+        print("  No image rows were added this run; existing rows were left as it is.")
 
 
 if __name__ == "__main__":

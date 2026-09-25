@@ -1,38 +1,28 @@
-/* =========================================================
-   TOKENS — naturalist's field-journal palette
-   Cream and brown throughout: morning-cream surfaces, brass/gold
-   leaf, aged paper, wine, and warm umber accents.
-   ========================================================= */
 :root {
-    /* warm surfaces: cream morning-light through to coffee-brown grounding */
+
     --color-page:         #FBF3E4;
     --color-surface:      #F5EAD8;
     --color-surface-2:    #EEDDBE;
     --color-border:       #E3CBA4;
     --color-border-soft:  #ECDCBC;
     --color-surface-deep: #4E3B28;
-
     --color-paper:      #FFFBF2;
     --color-paper-2:    #F8EFDC;
     --color-paper-dim:  #F1E3C6;
-
     --color-accent-gold:          #C6862F;
     --color-accent-gold-bright:   #E3A94E;
     --color-accent-wine:          #A24B45;
     --color-accent-wine-bright:   #C15F55;
     --color-accent-umber:         #8B5E34;
-
     --text-primary:       #3E2E20;
     --text-secondary:     #8A7256;
     --text-onsurface:     #40301F;
     --text-onsurface-dim: #8A7660;
     --text-oninverse-dim: #CBB799;
-
     --display: "Fraunces", "Georgia", serif;
     --body:    "Work Sans", "Helvetica Neue", sans-serif;
     --mono:    "Space Mono", "Courier New", monospace;
     --hand:    "Caveat", "Segoe Script", cursive;
-
     --radius: 10px;
     --ease: cubic-bezier(0.22, 0.85, 0.28, 1);
 }
@@ -41,21 +31,10 @@
 
 html {
     scroll-behavior: smooth;
-    /* safety net against stray horizontal scroll on narrow phones.
-       Deliberately NOT set on body: overflow-x on body turns it into
-       its own scroll container, which silently breaks position:sticky
-       for elements inside it (this is what was capping the sidebar). */
     overflow-x: hidden;
     width: 100%;
 }
 
-/* Chromium now supports the standard `scrollbar-color`/`scrollbar-width`
-   properties, and when both those AND ::-webkit-scrollbar-* pseudo-elements
-   are present, the standard properties win — flattening our gradient/
-   animated thumb down to one plain color. Firefox has no ::-webkit-scrollbar
-   support at all, so it's the only browser that actually needs
-   scrollbar-color; scoping it to browsers that lack ::-webkit-scrollbar
-   support keeps it out of Chromium/Safari's way. */
 @supports not selector(::-webkit-scrollbar) {
     html {
         scrollbar-width: auto;
@@ -91,8 +70,6 @@ html {
     * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
-/* one-shot fade/rise reveal for sections as they scroll into view,
-   toggled by IntersectionObserver in app.js */
 .reveal-on-scroll {
     opacity: 0;
     transform: translateY(28px);
@@ -104,8 +81,6 @@ html {
     transform: translateY(0);
 }
 
-/* confetti burst — spawned by app.js on game-select / card-open,
-   removed from the DOM once its fall animation finishes */
 .confetti-piece {
     position: fixed;
     top: 0;
@@ -156,7 +131,6 @@ a { color: inherit; }
     outline-offset: 3px;
 }
 
-/* faint laid-paper texture across the whole page */
 body::before {
     content: "";
     position: fixed;
@@ -168,12 +142,6 @@ body::before {
             repeating-linear-gradient(0deg, transparent, transparent 2px, #4a3826 2px, #4a3826 3px);
 }
 
-/* --- rave-mode background wash: a slow-rotating rainbow glow behind
-   everything while the music plays. Same oklch "longer hue" trick as
-   the tag/pin — two identical color stops, interpolated the long way
-   round, so one rotating conic-gradient sweeps the full spectrum with
-   no hard seams. soft-light blend keeps it a colorful tint rather than
-   an opaque wash, so body copy and cards stay fully readable on top. */
 @property --bg-angle {
     syntax: '<angle>';
     inherits: false;
@@ -200,10 +168,6 @@ body.music-playing::after {
     animation-play-state: running;
 }
 
-/* while the color-splash burst is still playing (first click only), hold
-   the page-wide rave wash at bay — otherwise it starts spinning behind
-   the splash's own cream/brown fill before the fill has finished
-   expanding, and the two blends read as one confused rainbow. */
 body.music-playing.rave-hold::after {
     opacity: 0 !important;
     animation-play-state: paused !important;
@@ -213,9 +177,6 @@ body.music-playing.rave-hold::after {
     to { --bg-angle: 360deg; }
 }
 
-/* a second, faster-pulsing glow layered on <html> — gives rave mode an
-   extra "beat" without touching body's own pseudo-elements. Peaks
-   quickly then eases back, like a slow strobe rather than a hard flash. */
 html::after {
     content: "";
     position: fixed;
@@ -242,16 +203,6 @@ html.music-playing.rave-hold::after {
     50%      { opacity: 0.5;  transform: scale(1.18); }
 }
 
-/* --- the search box, contact panel, and footer are structural chrome,
-   not clickable/accent elements — same category as body copy, headings
-   and the game list, which the RAVE MODE section below deliberately
-   leaves alone. Every attempt to light these three up (a spinning fill,
-   then a glowing ring) kept feeling mismatched for the same reason: as
-   background surfaces they're not meant to join the rainbow at all, so
-   they're left untouched during rave mode. The actual buttons inside
-   the contact panel (.contact__btn) still get their own proper ring,
-   same as any other clickable control. */
-
 @media (prefers-reduced-motion: reduce) {
     body.music-playing::after,
     html.music-playing::after {
@@ -260,18 +211,9 @@ html.music-playing.rave-hold::after {
     }
 }
 
-/* =========================================================
-   HERO — a field permit: half ledger, half specimen mount.
-   One orchestrated load sequence: a flight route draws itself
-   across the scene, a photo drops in on a pin, then a
-   verification seal stamps down last. Nothing else moves
-   until the visitor scrolls or clicks.
-   ========================================================= */
 .hero {
     position: relative;
     min-height: 100vh;
-    /* dvh accounts for mobile browser chrome so the hero doesn't
-       overshoot the real visible viewport and leave a jumpy gap */
     min-height: 100dvh;
     display: flex;
     align-items: stretch;
@@ -289,7 +231,6 @@ html.music-playing.rave-hold::after {
     padding: 6rem 4vw 4rem 6vw;
 }
 
-/* right side: a full-bleed photo, feathered into the cream on its inner edge */
 .hero__visual {
     position: relative;
     flex: 0 0 35%;
@@ -329,10 +270,6 @@ html.music-playing.rave-hold::after {
     }
 }
 
-/* =========================================================
-   PHONE — tighten spacing, drop hover-only affordances,
-   and stop long labels/wide grids from forcing a scrollbar.
-   ========================================================= */
 @media (max-width: 480px) {
     .hero__visual {
         min-height: 34vh;
@@ -366,8 +303,6 @@ html.music-playing.rave-hold::after {
         max-width: none;
     }
 
-    /* long labels like "Community Sidekicks" no longer force nowrap
-       overflow on a narrow phone — let the row wrap instead */
     .ledger__row {
         flex-wrap: wrap;
         gap: 0.3rem 0.6rem;
@@ -419,7 +354,6 @@ html.music-playing.rave-hold::after {
     }
 }
 
-/* the eyebrow, reimagined as an actual paper tag with a punched hole */
 .tag {
     position: relative;
     display: inline-flex;
@@ -449,25 +383,17 @@ html.music-playing.rave-hold::after {
     flex-shrink: 0;
 }
 
-/* registered so the browser can smoothly animate its value */
 @property --tag-angle {
     syntax: '<angle>';
     inherits: false;
     initial-value: 0deg;
 }
 
-/* rainbow border + halo, hidden and stationary until music is playing.
-   Uses the oklch "longer hue" trick: interpolating a conic-gradient
-   between the *same* color, the long way around the hue wheel, walks
-   through the full spectrum smoothly with just one color variable.
-   The gradient's start angle is what animates — the pill itself
-   never rotates, so the shape stays perfectly still. */
 .tag {
     --glow-color: oklch(0.78 0.19 30);
     isolation: isolate;
 }
 
-/* soft blurred glow sitting behind the pill */
 .tag::after {
     content: "";
     position: absolute;
@@ -483,7 +409,6 @@ html.music-playing.rave-hold::after {
     pointer-events: none;
 }
 
-/* crisp ring sitting exactly on the pill's own border line */
 .tag::before {
     content: "";
     position: absolute;
@@ -518,7 +443,6 @@ body.music-playing:not(.rave-hold) .tag::after {
     to { --tag-angle: 360deg; }
 }
 
-/* the "jump into it" CTA: a gentle, inviting bounce so it reads as clickable */
 .tag--cta {
     animation: tag-in 0.5s var(--ease) forwards 0.2s,
     tag-bounce 2.4s ease-in-out infinite 1s;
@@ -542,7 +466,6 @@ body.music-playing:not(.rave-hold) .tag::after {
     50%      { transform: translateY(-4px); }
 }
 
-/* music line: plain text, no pill, just darkens on hover */
 .music-line {
     display: inline-flex;
     align-items: center;
@@ -642,7 +565,6 @@ body.music-playing:not(.rave-hold) .tag::after {
 
 .hero__scroll:hover svg { transform: translateY(2px); }
 
-/* stats as a ledger line-item, not a big-number stat block */
 .ledger {
     margin: 3rem 0 0;
     padding-top: 1.4rem;
@@ -717,9 +639,6 @@ body.music-playing:not(.rave-hold) .tag::after {
     }
 }
 
-/* =========================================================
-   MAIN LAYOUT — sidebar + specimen board
-   ========================================================= */
 .collection {
     display: grid;
     grid-template-columns: 260px 1fr;
@@ -727,10 +646,6 @@ body.music-playing:not(.rave-hold) .tag::after {
     min-height: 100dvh;
 }
 
-/* --- sidebar: ledger index of games --- */
-/* outer box: purely visual — stretches to match the board's full
-   height (as a normal grid item) so the background/border never
-   "caps" early just because the game list itself is short */
 .sidebar {
     background: var(--color-surface);
     border-right: 1px dashed var(--color-border);
@@ -738,8 +653,6 @@ body.music-playing:not(.rave-hold) .tag::after {
     min-height: 100%;
 }
 
-/* inner panel: this is what actually pins to the viewport and
-   scrolls internally once the list is longer than one screen */
 .sidebar__sticky {
     display: flex;
     flex-direction: column;
@@ -894,17 +807,8 @@ body.music-playing:not(.rave-hold) .tag::after {
 
 .game-item.active .game-btn__index { color: var(--color-accent-gold-bright); }
 
-/* Mobile overrides for the sidebar + collection layout. This must come
-   AFTER the unconditional .sidebar/.game-list/.game-item rules above —
-   same-specificity selectors resolve by source order, so placing this
-   media query any earlier lets those later base rules silently win and
-   re-apply the full-height desktop sidebar on mobile. */
 @media (max-width: 780px) {
     .collection {
-        /* switch off grid entirely on mobile — a grid row can still get
-           stretched to fill leftover space depending on content sizing,
-           which is what was leaving a gap under the sidebar. Plain
-           block stacking has no such ambiguity. */
         display: block;
         min-height: 0;
     }
@@ -916,9 +820,6 @@ body.music-playing:not(.rave-hold) .tag::after {
         height: auto;
         overflow-y: visible;
     }
-    /* keep the game list itself glanceable on mobile — about 5 games
-       tall, scrollable in place — instead of a long list you have to
-       scroll through just to reach the collection below */
     .game-list {
         max-height: 16rem;
         overflow-y: auto;
@@ -943,8 +844,6 @@ body.music-playing:not(.rave-hold) .tag::after {
         background-color: var(--color-accent-gold);
     }
     .game-list::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
-    /* the list already draws its own top/bottom border above, so drop
-       the per-item ones to avoid a doubled line at the edges */
     .game-item:first-child { border-top: none; }
     .game-item:last-child { border-bottom: none; }
 
@@ -953,7 +852,6 @@ body.music-playing:not(.rave-hold) .tag::after {
     }
 }
 
-/* --- board: header + specimen grid --- */
 .board {
     min-height: 100vh;
     min-height: 100dvh;
@@ -1062,8 +960,6 @@ body.music-playing:not(.rave-hold) .tag::after {
     outline: none;
 }
 
-/* rave mode: the same rainbow halo + crisp ring as .tag, sized to
-   fit this pill, since this control is shaped just like a tag. */
 .board__sort-label {
     --glow-color: oklch(0.78 0.19 30);
     isolation: isolate;
@@ -1123,7 +1019,6 @@ body.music-playing:not(.rave-hold) .board__sort {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 }
 
-/* hidden entirely until a game is selected — matches boardMeta being empty */
 .board__sort-label[hidden] {
     display: none;
 }
@@ -1134,12 +1029,6 @@ body.music-playing:not(.rave-hold) .board__sort {
     gap: 1.6rem;
 }
 
-/* =========================================================
-   SPECIMEN CARD — plated, field-guide illustration feel
-   Each card cycles through three named accents set in app.js
-   (gold / wine / umber) rather than a full rainbow — a quieter,
-   more considered palette in keeping with the rest of the page.
-   ========================================================= */
 .specimen {
     --accent: var(--color-accent-gold);
     background: var(--color-paper);
@@ -1167,7 +1056,6 @@ body.music-playing:not(.rave-hold) .board__sort {
     z-index: 2;
 }
 
-/* pin, colored per-card accent */
 .specimen::before {
     content: "";
     position: absolute;
@@ -1182,8 +1070,6 @@ body.music-playing:not(.rave-hold) .board__sort {
     z-index: 1;
 }
 
-/* small cast shadow the pin drops onto the card surface just below it,
-   so the two read as one object instead of a dot floating over the top edge */
 .specimen::after {
     content: "";
     position: absolute;
@@ -1209,8 +1095,6 @@ body.music-playing:not(.rave-hold) .board__sort {
     justify-content: center;
 }
 
-/* a light streak that sweeps across the photo once on hover — playful,
-   not distracting, and doesn't run again until the pointer leaves and re-enters */
 .specimen__frame::after {
     content: "";
     position: absolute;
@@ -1273,12 +1157,6 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
     margin: 0.4rem 0 0;
 }
 
-/* =========================================================
-   SKELETON CARDS — shimmering placeholders shown in the board
-   grid while data.csv is still being fetched, so the first
-   paint isn't just an empty box. Reuses .specimen's shape/pin
-   but skips the rise-in animation and any interactivity.
-   ========================================================= */
 .specimen--skeleton {
     opacity: 1;
     animation: none;
@@ -1332,7 +1210,6 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
     }
 }
 
-/* empty state */
 .board__empty {
     font-family: var(--hand);
     font-weight: 700;
@@ -1346,7 +1223,6 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
     margin: 0 auto;
 }
 
-/* fetch-error notice (file:// protocol) */
 .notice {
     margin: 2rem 6vw 0;
     padding: 1rem 1.25rem;
@@ -1368,24 +1244,6 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
     font-size: 0.85em;
 }
 
-/* =========================================================
-   COLOR SPLASH — a one-shot burst that fires from wherever the
-   "Wanna listen to some music?" line was clicked, whether music is
-   starting OR stopping. Two colored orbs race in from the left and
-   right edges of the screen at equal speed, mixing their colors
-   together (mix-blend-mode: screen) as they meet dead center, then
-   burst into a white flash and settle into a clean cream/brown blend
-   at the collision point — then, a beat later, that same blend blooms
-   into a spinning rainbow (the tag's own trick) that washes over the
-   whole screen. A big "LETS GROOVE!!!" pops into the center as the
-   color settles, set in the same hand-lettered font used on the paper
-   tags. The whole sequence runs in 2.6 seconds flat.
-   Both orbs converge on the screen's actual center (not the click
-   point) so their travel distance — and how dramatic the sweep looks
-   — is always identical regardless of where on the page you clicked.
-   Purely decorative: fixed, full-screen, pointer-events: none so it
-   never blocks a click, and skipped for reduced-motion.
-   ========================================================= */
 @property --splash-angle {
     syntax: '<angle>';
     inherits: false;
@@ -1413,10 +1271,6 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
     isolation: isolate;
 }
 
-/* the tag's blurred-halo trick, reused here: a soft glow sitting behind
-   the orb, colored per side — lighter tint on the left, darker on the
-   right — instead of the tag's rotating rainbow (the orbs already carry
-   their own two-tone gradient, so the halo just needs to echo that). */
 .color-splash__orb::after {
     content: "";
     position: absolute;
@@ -1429,7 +1283,6 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
 }
 
 .color-splash__orb--left {
-    /* creamy, echoing --color-paper / --color-accent-gold */
     --glow-color: oklch(0.93 0.045 85);
     background:
             radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 40%),
@@ -1439,7 +1292,6 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
 }
 
 .color-splash__orb--right {
-    /* soft brown, echoing --color-accent-umber / --color-surface-deep */
     --glow-color: oklch(0.5 0.07 50);
     background:
             radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 40%),
@@ -1497,9 +1349,6 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
 .color-splash__fill {
     position: absolute;
     inset: 0;
-    /* the clean two-tone blend at the moment of collision — creamy
-       meeting soft brown, held as a static split (shorter hue, no
-       spin) so it reads clearly before the rainbow layer takes over */
     background: conic-gradient(from 90deg in oklch shorter hue, oklch(0.93 0.045 85), oklch(0.5 0.07 50), oklch(0.93 0.045 85));
     clip-path: circle(0% at 50% 50%);
 }
@@ -1508,12 +1357,6 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
     animation: fill-expand 2.6s cubic-bezier(0.16, 0.84, 0.24, 1) forwards;
 }
 
-/* a second layer, stacked directly on top of the fill: invisible at
-   first, so the cream/brown blend above gets its moment, then fades
-   in partway through and spins using the tag's exact rainbow recipe —
-   a single color repeated as both gradient stops with "longer hue",
-   which is what forces a full, even 360° sweep (using two *different*
-   colors here instead gave only a partial, lopsided arc). */
 .color-splash__rainbow {
     position: absolute;
     inset: 0;
@@ -1600,9 +1443,6 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
     }
 }
 
-/* =========================================================
-   LIGHTBOX — full image view on card click
-   ========================================================= */
 .lightbox {
     position: fixed;
     inset: 0;
@@ -1636,10 +1476,6 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
     animation: lightbox-pop 0.28s var(--ease);
 }
 
-/* wraps just the photo (not the caption) so the prev/next buttons below
-   can anchor to the image's own edges instead of the full viewport —
-   keeps them hugging the photo at any screen size instead of sitting
-   out at the extreme left/right of the browser window */
 .lightbox__media {
     position: relative;
     max-width: 100%;
@@ -1663,8 +1499,6 @@ body.music-playing:not(.rave-hold) .lightbox__figure {
     animation-duration: 0.45s;
 }
 
-/* the cream paper "mat" the photo sits in — kept as its own element so its
-   padding doesn't push the photo's corners past the reach of a rounded edge */
 .lightbox__mat {
     --mat-pad: 1.25rem;
     display: inline-flex;
@@ -1678,18 +1512,13 @@ body.music-playing:not(.rave-hold) .lightbox__figure {
 .lightbox__img {
     display: block;
     max-width: 100%;
-    /* subtract the mat's own padding so the whole mat still tops out
-       around 78vh, matching the original single-element sizing */
     max-height: calc(78vh - (var(--mat-pad) * 2));
     width: auto;
     height: auto;
     object-fit: contain;
-    border-radius: 6px; /* same rounding as the .specimen__frame thumbnails */
+    border-radius: 6px;
 }
 
-/* caption is split into a title line and a smaller meta line (credit,
-   date) rather than one flat sentence, so the bird/entry name reads as
-   the headline and the "who/when" detail sits underneath it, quieter */
 .lightbox__caption {
     display: flex;
     flex-direction: column;
@@ -1721,8 +1550,6 @@ body.music-playing:not(.rave-hold) .lightbox__figure {
     color: var(--text-oninverse-dim);
 }
 
-/* short dash on either side of the meta line — same dotted-leader,
-   hand-laid-out feel as the tag and fact-tile labels elsewhere */
 .lightbox__caption-meta::before,
 .lightbox__caption-meta::after {
     content: "";
@@ -1760,12 +1587,6 @@ body.music-playing:not(.rave-hold) .lightbox__figure {
     transform: scale(1.06) rotate(90deg);
 }
 
-/* prev/next: same plated-button look as close. Anchored to
-   .lightbox__media (the photo's positioned parent) and pushed out
-   past its edge, so they float in the dark backdrop just outside the
-   frame — close to the photo, but not overlapping it. On small
-   screens (below) they switch to pinning at the screen edges instead,
-   since there isn't room to float them outside the frame there. */
 .lightbox__nav {
     position: absolute;
     top: 50%;
@@ -1796,10 +1617,6 @@ body.music-playing:not(.rave-hold) .lightbox__figure {
 }
 
 @media (max-width: 640px) {
-    /* not enough room beside the photo on small screens to float the
-       buttons outside its frame without running off the viewport — pin
-       them to the screen edges instead (the photo already fills most
-       of the width here, so they still end up right next to it) */
     .lightbox__nav {
         position: fixed;
         top: 50%;
@@ -1808,9 +1625,6 @@ body.music-playing:not(.rave-hold) .lightbox__figure {
     .lightbox__nav--next { right: 0.5rem; }
 }
 
-/* =========================================================
-   CONTACT
-   ========================================================= */
 .contact {
     border-top: 1px solid var(--color-border);
     padding: 2.5rem 6vw;
@@ -1856,11 +1670,6 @@ body.music-playing:not(.rave-hold) .lightbox__figure {
     color: var(--color-paper);
 }
 
-/* =========================================================
-   NO BIRDS SPOTTED — games explored that had no birds to log.
-   Compact tag-cloud of chips instead of a one-per-row list, so a
-   long list stays a few short wrapped lines rather than a scroll.
-   ========================================================= */
 .no-birds {
     border-top: 1px dashed var(--color-border);
     background: var(--color-surface);
@@ -1919,8 +1728,6 @@ body.music-playing:not(.rave-hold) .lightbox__figure {
     transform: translateY(-1px);
 }
 
-/* rave mode: a thin hue-cycling border, using the same --accent sweep
-   as the bird cards and scrapbook cards, so the chips join in too. */
 body.music-playing:not(.rave-hold) .no-birds__chip {
     animation: rave-accent 3.5s linear infinite;
     border-style: solid;
@@ -1928,9 +1735,6 @@ body.music-playing:not(.rave-hold) .no-birds__chip {
     border-color: var(--accent);
 }
 
-/* =========================================================
-   BACK TO TOP — thin strip closing out the collection
-   ========================================================= */
 .back-to-top-banner {
     display: block;
     text-align: center;
@@ -1953,20 +1757,6 @@ body.music-playing:not(.rave-hold) .no-birds__chip {
     color: var(--color-paper);
 }
 
-/* =========================================================
-   RAVE MODE — the .tag rainbow ring, reused on a handful of other
-   clickable/accent elements when the music is playing. Deliberately
-   NOT applied to backgrounds, body copy, headings or the game list —
-   those stay put so the page is still easy to read and use, and the
-   rainbow reads as a fun accent rather than a full page takeover.
-   ========================================================= */
-
-/* --- specimen cards: their existing per-card accent (gold / wine /
-   umber, driven by --accent) sweeps through the spectrum instead.
-   Everything already keyed off --accent — border, pin, id label —
-   moves together for free. animation-* is written in longhand here
-   so this rule can ADD a second animation without clobbering the
-   card's own entrance animation declared above. */
 @property --accent {
     syntax: '<color>';
     inherits: false;
@@ -2012,10 +1802,6 @@ body.music-playing:not(.rave-hold) .specimen {
     animation-iteration-count: 1, infinite, infinite;
 }
 
-/* --- rave-mode glowing border: the same hue-cycling --accent used by the
-   specimen cards, applied as a pulsing halo of box-shadow rings around the
-   hero collage and the About Me photo, so both feel lit up while the
-   music plays rather than sitting static next to everything else. */
 body.music-playing:not(.rave-hold) .hero__visual {
     animation: rave-accent 3.5s linear infinite;
     box-shadow:
@@ -2033,12 +1819,6 @@ body.music-playing:not(.rave-hold) .scrap {
             0 0 26px 8px color-mix(in oklch, var(--accent) 45%, transparent);
 }
 
-/* --- buttons & controls: the same halo + crisp-ring pair from .tag,
-   sized to fit each shape (pill / circle / strip / nav row).
-   .lightbox__close and .lightbox__nav already carry their own
-   position: absolute (pinned to the lightbox corners/sides) — only
-   isolation is added here for those two, so this halo rule doesn't
-   knock them back into normal document flow. */
 .contact__btn,
 .back-to-top-banner,
 .game-item.active .game-btn {
@@ -2118,12 +1898,6 @@ body.music-playing:not(.rave-hold) .game-item.active .game-btn__count {
     color: #fff;
 }
 
-/* --- logbook tabs: same halo + crisp-ring pair as the buttons above.
-   The tab's ::after is normally the gold underline bar — in rave mode
-   it drops the underline treatment entirely and becomes the crisp
-   ring instead (mask trick, same as .contact__btn::after), sized to
-   wrap the label like a little pill, while ::before sits behind it as
-   the blurred glow. */
 .logbook__tab.is-active {
     position: relative;
     isolation: isolate;
@@ -2144,11 +1918,6 @@ body.music-playing:not(.rave-hold) .game-item.active .game-btn__count {
     transition: opacity 0.35s var(--ease);
 }
 
-/* the button's own padding is 0 top / 0.8rem bottom — space normally
-   reserved for the underline bar sitting under the text. The ring
-   wraps the button's actual box, so with the old padding left in
-   place the text would sit visibly above-center inside it; squaring
-   the padding up here keeps the label centered in the pill. */
 body.music-playing:not(.rave-hold) .logbook__tab.is-active {
     padding: 0.35rem 0.1rem;
     color: #fff;
@@ -2178,7 +1947,6 @@ body.music-playing:not(.rave-hold) .logbook__tab.is-active::after {
     animation: rainbow-angle 1.4s linear infinite;
 }
 
-/* --- headline text: no box, no background, no color effects. */
 .hero__title,
 .board__title {
     text-shadow: none;
@@ -2200,18 +1968,6 @@ body.music-playing:not(.rave-hold) .logbook__tab.is-active::after {
     }
 }
 
-/* --- scrollbars: every scrollbar on the page (the page itself, the
-   sidebar, the game list) turns into a flowing rainbow strip while the
-   music plays. The page's own scrollbar belongs to <html>, not <body>
-   (html has an explicit overflow-x set, so it owns the viewport
-   scrollbar) — the html.music-playing selectors are what make that one
-   glow; the body.music-playing ones are kept too in case that ever
-   changes. Firefox's `scrollbar-color` only takes flat colors — no
-   gradients, no animation — so it gets a single vivid fallback hue
-   instead of the flowing effect. That fallback is scoped to browsers
-   without ::-webkit-scrollbar support (Firefox) — otherwise Chromium's
-   native scrollbar-color support would flatten the animated gradient
-   below down to this one plain color, same as the base scrollbar above. */
 @supports not selector(::-webkit-scrollbar) {
     html.music-playing:not(.rave-hold),
     body.music-playing:not(.rave-hold),
@@ -2259,11 +2015,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     }
 }
 
-/* =========================================================
-   TACTILE FEEDBACK — a quick, satisfying press on everything
-   clickable. Placed after each element's own rules so it wins
-   over :hover at equal specificity when both match during a click.
-   ========================================================= */
 .specimen:active {
     transform: scale(0.97) translateY(-2px);
 }
@@ -2283,7 +2034,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
 }
 
 .lightbox__nav:active {
-    /* keep the existing vertical centering instead of losing it to the shared rule above */
     transform: translateY(-50%) scale(0.9);
 }
 
@@ -2327,10 +2077,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     color: var(--text-oninverse-dim);
 }
 
-/* the "Solune" credit doubles as the About Me toggle — stays plain at
-   rest so it still reads as a name rather than a button, but a soft
-   dotted underline + cursor + color lift on hover/focus give a quiet
-   nudge that it's clickable, without spelling out what's behind it */
 .footer-credit-btn {
     background: none;
     border: none;
@@ -2351,35 +2097,19 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     text-decoration-color: var(--color-accent-gold-bright);
 }
 
-
-/* =========================================================
-   ABOUT ME — a scrapbook page tucked below the footer:
-   torn-paper cards, washi tape, and a couple of doodled
-   stickers, each card sitting at its own gentle tilt like it
-   was laid down by hand rather than snapped to a grid.
-   ========================================================= */
 .about-me {
     border-top: 1px dashed var(--color-border);
     background: var(--color-surface);
     padding: 5rem 6vw 6rem;
     min-height: 100vh;
-    /* dvh accounts for mobile browser chrome, same reasoning as .hero */
     min-height: 100dvh;
     display: flex;
     align-items: center;
     position: relative;
     overflow: hidden;
-    /* closed/default state: invisible and settled slightly lower. The
-       actual open/close animation is handled natively via the `hidden`
-       attribute + @starting-style below, rather than a JS-timed class —
-       the browser keeps `display: flex` for the full transition on
-       both ends instead of us having to guess the CSS duration in JS. */
     opacity: 0;
     transform: translateY(28px);
     transition: opacity 0.4s var(--ease), transform 0.4s var(--ease), display 0.4s allow-discrete;
-    /* hints the browser to composite this on its own layer so the
-       fade/rise doesn't repaint the (fairly busy) card content and
-       background texture on every frame */
     will-change: opacity, transform;
 }
 
@@ -2388,9 +2118,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     transform: translateY(0);
 }
 
-/* the state to transition *from* the instant `hidden` is removed —
-   without this, removing `hidden` would just snap straight to the
-   open state above with no animation at all */
 @starting-style {
     .about-me:not([hidden]) {
         opacity: 0;
@@ -2398,15 +2125,10 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     }
 }
 
-/* still needed for browsers without @starting-style/allow-discrete
-   support: at least jumps straight to fully hidden rather than
-   leaving an invisible-but-interactive block sitting in the layout */
 .about-me[hidden] {
     display: none;
 }
 
-/* a scattering of faint accent dots behind the whole page, standing
-   in for a corkboard's texture without needing an image asset */
 .about-me::before {
     content: "";
     position: absolute;
@@ -2427,8 +2149,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     margin: 0 auto;
 }
 
-/* re-centers the "secret page" tag above the scrapbook rather than
-   inline with a text column, and gives it its own little tilt */
 .about-me__board > .about-me__tag {
     display: flex;
     justify-content: center;
@@ -2448,9 +2168,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     padding: 0.55rem 1.3rem 0.55rem 0.95rem;
 }
 
-/* doodled stickers, scattered around the board behind the cards —
-   pure decoration, kept out of the tab order and off to the side so
-   they never sit on top of anything readable */
 .about-me__sticker {
     position: absolute;
     z-index: 0;
@@ -2496,18 +2213,12 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     gap: 2.5rem 4.5rem;
 }
 
-/* one unbroken row only on genuinely large screens — the photo card
-   is now a fixed size, so narrower widths wrap instead of squeezing
-   the note/facts cards down to nothing */
 @media (min-width: 1180px) {
     .about-me__grid {
         flex-wrap: nowrap;
     }
 }
 
-/* the shared "piece of paper" look every card in the scrapbook uses:
-   a hand-cut-looking blob radius, a bit of lift, and a gentle
-   straighten-and-rise on hover so the page still feels touchable */
 .scrap {
     position: relative;
     background: var(--color-paper);
@@ -2527,9 +2238,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
 .scrap--photo {
     flex: 0 0 380px;
     transform: rotate(-4deg);
-    /* rotating an element can push browsers onto a blurry subpixel-
-       antialiased rendering path; forcing its own compositor layer
-       keeps the photo crisp */
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
 }
@@ -2622,7 +2330,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     transform: rotate(-1deg);
 }
 
-/* a loose, hand-drawn underline swipe instead of a plain rule */
 .about-me__title::after {
     content: "";
     position: absolute;
@@ -2649,9 +2356,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     margin-bottom: 0;
 }
 
-/* the fun-facts card: its own small stack of tilted tiles, rather than
-   reusing the hero's dotted-leader ledger — that read as a re-skin of
-   the stats block instead of a scrapbook card of its own. */
 .fact-card__title {
     font-family: var(--hand);
     font-weight: 700;
@@ -2698,14 +2402,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     text-align: left;
 }
 
-/* =========================================================
-   LOGBOOK — its own section directly below About Me, sharing
-   that section's reveal mechanics (opens/closes in lockstep,
-   see initAboutMe in app.js) and, unlike About Me, built from
-   the site's own look — same dashed section border, Fraunces
-   heading and mono date labels as the rest of the page — rather
-   than the scrapbook's torn paper and washi tape.
-   ========================================================= */
 .logbook-section {
     border-top: 1px dashed var(--color-border);
     background: var(--color-surface);
@@ -2714,8 +2410,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     justify-content: center;
     max-height: 100vh;
     overflow-y: auto;
-    /* same native hidden-attribute-driven fade/rise as .about-me, so the
-       two sections open and close together without any JS-timed classes */
     opacity: 0;
     transform: translateY(28px);
     transition: opacity 0.4s var(--ease), transform 0.4s var(--ease), display 0.4s allow-discrete;
@@ -2815,7 +2509,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     text-align: left;
 }
 
-/* --- Birb Log: date heading > game heading > grid of bird cards --- */
 .logbook__date-group {
     margin-bottom: 2.25rem;
 }
@@ -2859,7 +2552,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     gap: 1.1rem;
 }
 
-/* --- Dev Log: plain chronological entries, image only when present --- */
 .logbook__panel--dev:not([hidden]) {
     display: flex;
     flex-direction: column;
@@ -2914,12 +2606,6 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     height: auto;
 }
 
-/* =========================================================
-   LOG CARD — the same plated field-guide card as .specimen in
-   the main collection (frame, shine sweep, accent-cycling
-   border, gentle tilt), minus the pin decoration and credit
-   line, which don't apply to a changelog entry.
-   ========================================================= */
 .log-card {
     --accent: var(--color-accent-gold);
     background: var(--color-paper);
