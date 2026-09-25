@@ -37,12 +37,17 @@
     if (heroEl && heroImgEl
         && window.matchMedia('(hover: hover) and (pointer: fine)').matches
         && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        let parallaxRAF = null;
         heroEl.addEventListener('mousemove', (e) => {
-            const rect = heroEl.getBoundingClientRect();
-            const px = ((e.clientX - rect.left) / rect.width - 0.5) * 2;  // -1..1
-            const py = ((e.clientY - rect.top) / rect.height - 0.5) * 2;  // -1..1
-            heroImgEl.style.setProperty('--parallax-x', (px * -10).toFixed(2));
-            heroImgEl.style.setProperty('--parallax-y', (py * -6).toFixed(2));
+            if (parallaxRAF) return; // a frame is already queued for this movement, skip
+            parallaxRAF = requestAnimationFrame(() => {
+                parallaxRAF = null;
+                const rect = heroEl.getBoundingClientRect();
+                const px = ((e.clientX - rect.left) / rect.width - 0.5) * 2;  // -1..1
+                const py = ((e.clientY - rect.top) / rect.height - 0.5) * 2;  // -1..1
+                heroImgEl.style.setProperty('--parallax-x', (px * -10).toFixed(2));
+                heroImgEl.style.setProperty('--parallax-y', (py * -6).toFixed(2));
+            });
         });
         heroEl.addEventListener('mouseleave', () => {
             heroImgEl.style.setProperty('--parallax-x', 0);
