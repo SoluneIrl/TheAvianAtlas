@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Avian Atlas</title>
+    <meta name="description" content="A personal catalogue of every bird spotted across video games — screenshots, sprites, and portraits filed by game, field-journal style." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="The Avian Atlas — My Digital Bird Watching Journey" />
+    <meta property="og:description" content="A personal catalogue of every bird spotted across video games, filed by game." />
+    <meta property="og:image" content="Assets/Resources/Collage.png" />
+    <meta property="og:image:alt" content="A collage of birds spotted across video games" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="Assets/Resources/Collage.png" />
+    <meta name="theme-color" content="#FBF3E4" />
+    <link rel="icon" href="Assets/Resources/Logo.png" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Work+Sans:wght@400;500&family=Space+Mono:wght@400;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<noscript>
+    <div class="notice">
+        This site needs JavaScript enabled to load and display the bird collection — please enable it and reload the page.
+    </div>
+</noscript>
+
+<!-- ============ HERO ============ -->
+<header class="hero" id="top">
+    <div class="hero__content">
+        <div class="tag">
+            <span class="tag__hole"></span>
+            Vol I &nbsp;&middot;&nbsp; The Avian Atlas
+        </div>
+
+        <h1 class="hero__title">My Digital Bird Watching Journey</h1>
+
+        <p class="hero__sub">
+            I hope this little project of mine reflects both my love for birds and gaming. I don’t see myself stopping anytime soon, and I can’t wait to keep adding to it and watching this collection grow!
+        </p>
+
+        <button type="button" id="musicToggle" class="music-line" aria-pressed="false">
+            <span class="music-line__icon" id="musicToggleIcon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.4086 9.35258C23.5305 10.5065 23.5305 13.4935 21.4086 14.6474L8.59662 21.6145C6.53435 22.736 4 21.2763 4 18.9671L4 5.0329C4 2.72368 6.53435 1.26402 8.59661 2.38548L21.4086 9.35258Z"/></svg>
+            </span>
+            Wanna listen to some music while you explore? :D
+        </button>
+        <audio id="bgMusic" src="Assets/Resources/Song.mp3" loop preload="none"></audio>
+
+        <div class="tag tag--cta" style="margin: 1rem 0 0;">
+            <span class="tag__hole"></span>
+            <a class="tag-cta__link" style="text-decoration: none;" href="#collection">
+                Lets jump into it!
+            </a>
+        </div>
+
+        <dl class="ledger">
+            <p class="ledger__title">
+                <svg class="ledger__title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20V4M10 20V4M14 20V4M18 20V4M21 5L3 19"/></svg>
+                Field tally
+            </p>
+            <div class="ledger__row">
+                <dt>Birbs spotted</dt>
+                <span class="ledger__dots" aria-hidden="true"></span>
+                <dd id="statBirds">&ndash;</dd>
+            </div>
+            <div class="ledger__row">
+                <dt>Games Explored</dt>
+                <span class="ledger__dots" aria-hidden="true"></span>
+                <dd id="statGames">&ndash;</dd>
+            </div>
+            <div class="ledger__row">
+                <dt>Community Sidekicks</dt>
+                <span class="ledger__dots" aria-hidden="true"></span>
+                <dd id="statContributors">&ndash;</dd>
+            </div>
+        </dl>
+    </div>
+
+    <div class="hero__visual">
+        <img class="hero__img" src="Assets/Resources/Collage.png" alt="A bird spotted mid-game &mdash; the kind of moment this whole log is built around" fetchpriority="high" />
+    </div>
+</header>
+
+<!-- ============ NOTICE (only shown if loaded via file://) ============ -->
+<div class="notice" id="fileNotice" hidden>
+    Birds aren't loading because the browser blocks local file access to
+    <code>birds.csv</code> when a page is opened directly. Run a tiny local
+    server from this folder — <code>python3 -m http.server</code> — then open
+    <code>http://localhost:8000</code>, or use a tool like VS&nbsp;Code's
+    "Live Server" extension.
+</div>
+
+<!-- ============ COLLECTION ============ -->
+<main class="collection" id="collection">
+    <nav class="sidebar" aria-label="Games">
+        <div class="sidebar__sticky">
+            <p class="sidebar__label">My Myriad of Games</p>
+            <div class="sidebar__search-wrap">
+                <svg class="sidebar__search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 6C13.7614 6 16 8.23858 16 11M16.6588 16.6549L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z"/></svg>
+                <input
+                        type="search"
+                        id="gameSearch"
+                        class="sidebar__search"
+                        placeholder="Search games…"
+                        aria-label="Search games"
+                />
+            </div>
+            <ul class="game-list" id="gameList"></ul>
+        </div>
+    </nav>
+
+    <section class="board">
+        <div class="board__header" aria-live="polite" aria-atomic="true">
+            <h2 class="board__title" id="boardTitle">Select a game</h2>
+            <div class="board__header-right">
+                <span class="board__meta" id="boardMeta"></span>
+                <label class="board__sort-label" for="boardSort">
+                    <svg class="board__sort-icon" width="12" height="12" viewBox="0 0 489.389 489.389" fill="currentColor" aria-hidden="true"><path d="M261.294,326.102c-8.3-7.3-21.8-6.2-29.1,2.1l-77,86.8v-346.9c0-11.4-9.4-20.8-20.8-20.8s-20.8,9.4-20.8,20.8v346.9 l-77-86.8c-8.3-8.3-20.8-9.4-29.1-2.1c-8.3,8.3-9.4,20.8-2.1,29.1l113.4,126.9c8.5,10.5,23.5,8.9,30.2,0l114.4-126.9 C270.694,347.002,269.694,333.402,261.294,326.102z"/><path d="M483.994,134.702l-112.4-126.9c-10-10.1-22.5-10.7-31.2,0l-114.4,126.9c-7.3,8.3-6.2,21.8,2.1,29.1 c12.8,10.2,25.7,3.2,29.1-2.1l77-86.8v345.9c0,11.4,9.4,20.8,20.8,20.8s20.8-8.3,20.8-19.8v-346.8l77,86.8 c8.3,8.3,20.8,9.4,29.1,2.1C490.194,155.502,491.294,143.002,483.994,134.702z"/></svg>
+                    Sort
+                    <select id="boardSort" class="board__sort" aria-label="Sort birds">
+                        <option value="az" selected>A to Z</option>
+                        <option value="za">Z to A</option>
+                        <option value="new">Newest</option>
+                        <option value="old">Oldest</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+        <div class="board__grid" id="boardGrid"></div>
+    </section>
+</main>
+
+
+<!-- ============ NO BIRDS SPOTTED ============ -->
+<section class="no-birds reveal-on-scroll" id="no-birds">
+    <div class="no-birds__inner">
+        <h2 class="no-birds__heading">Certified Birbless Games</h2>
+        <p class="no-birds__sub">List of games I have played with no birds in them<br> (Or at least I haven't found any, feel free to prove me wrong :D)</p>
+        <ul class="no-birds__list" id="noBirdsList"></ul>
+    </div>
+</section>
+
+<!-- ============ BACK TO TOP ============ -->
+<a class="back-to-top-banner" href="#top">
+    Wanna go back to the top?
+</a>
+
+<!-- ============ COLOR SPLASH (fires on the music-toggle click) ============ -->
+<div class="color-splash" id="colorSplash" aria-hidden="true">
+    <span class="color-splash__orb color-splash__orb--left"></span>
+    <span class="color-splash__orb color-splash__orb--right"></span>
+    <span class="color-splash__impact"></span>
+    <div class="color-splash__fill"></div>
+    <div class="color-splash__rainbow"></div>
+    <p class="color-splash__text">LETS GROOVE!!!</p>
+</div>
+
+<!-- ============ LIGHTBOX ============ -->
+<div class="lightbox" id="lightbox" hidden>
+    <button class="lightbox__close" id="lightboxClose" type="button" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+    </button>
+    <figure class="lightbox__figure">
+        <div class="lightbox__media">
+            <div class="lightbox__mat">
+                <img class="lightbox__img" id="lightboxImg" src="" alt="" />
+            </div>
+            <button class="lightbox__nav lightbox__nav--prev" id="lightboxPrev" type="button" aria-label="Previous bird">
+                <svg width="20" height="20" viewBox="-5.5 0 26 26" fill="currentColor" aria-hidden="true"><path d="M428.115,1209 L437.371,1200.6 C438.202,1199.77 438.202,1198.43 437.371,1197.6 C436.541,1196.76 435.194,1196.76 434.363,1197.6 L423.596,1207.36 C423.146,1207.81 422.948,1208.41 422.985,1209 C422.948,1209.59 423.146,1210.19 423.596,1210.64 L434.363,1220.4 C435.194,1221.24 436.541,1221.24 437.371,1220.4 C438.202,1219.57 438.202,1218.23 437.371,1217.4 L428.115,1209" transform="translate(-423,-1196)"/></svg>
+            </button>
+            <button class="lightbox__nav lightbox__nav--next" id="lightboxNext" type="button" aria-label="Next bird">
+                <svg width="20" height="20" viewBox="-5.5 0 26 26" fill="currentColor" aria-hidden="true"><path d="M488.404,1207.36 L477.637,1197.6 C476.806,1196.76 475.459,1196.76 474.629,1197.6 C473.798,1198.43 473.798,1199.77 474.629,1200.6 L483.885,1209 L474.629,1217.4 C473.798,1218.23 473.798,1219.57 474.629,1220.4 C475.459,1221.24 476.806,1221.24 477.637,1220.4 L488.404,1210.64 C488.854,1210.19 489.052,1209.59 489.015,1209 C489.052,1208.41 488.854,1207.81 488.404,1207.36" transform="translate(-474,-1196)"/></svg>
+            </button>
+        </div>
+        <figcaption class="lightbox__caption" id="lightboxCaption">
+            <p class="lightbox__caption-title" id="lightboxCaptionTitle"></p>
+            <p class="lightbox__caption-meta" id="lightboxCaptionMeta"></p>
+        </figcaption>
+    </figure>
+</div>
+
+<!-- ============ CONTACT ============ -->
+<section class="contact reveal-on-scroll">
+    <h2 class="contact__heading">Spotted a birb I missed? Let me know!!</h2>
+    <div class="contact__buttons">
+        <a class="contact__btn" href="https://www.reddit.com/user/SoulFrost2020/" target="_blank" rel="noopener noreferrer">
+            <svg width="18" height="18" viewBox="0 0 32 32" fill="currentColor" role="img" aria-hidden="true"><path d="M12.606 20.986c-0.225 0.001-0.407 0.183-0.407 0.408 0 0.112 0.045 0.214 0.118 0.288l-0-0c0.952 0.716 2.155 1.146 3.457 1.146 0.085 0 0.17-0.002 0.255-0.006l-0.012 0c0.081 0.004 0.175 0.006 0.27 0.006 1.294 0 2.488-0.431 3.445-1.158l-0.014 0.010c0.077-0.081 0.124-0.19 0.124-0.311 0-0.101-0.033-0.194-0.089-0.269l0.001 0.001c-0.074-0.074-0.177-0.119-0.29-0.119s-0.215 0.045-0.29 0.119l0-0c-0.799 0.575-1.798 0.919-2.877 0.919-0.092 0-0.184-0.003-0.275-0.007l0.013 0.001c-0.082 0.005-0.178 0.008-0.274 0.008-1.075 0-2.070-0.345-2.88-0.93l0.014 0.010c-0.074-0.073-0.175-0.119-0.287-0.119-0.001 0-0.002 0-0.003 0h0zM19.436 16c-0.861 0.001-1.56 0.699-1.56 1.561s0.699 1.561 1.561 1.561 1.561-0.699 1.561-1.561v0c-0.002-0.862-0.7-1.56-1.562-1.561h-0zM12.563 16c0.861 0 1.56 0.699 1.56 1.56s-0.699 1.56-1.56 1.56-1.56-0.699-1.56-1.56c0-0.861 0.698-1.56 1.56-1.56h0zM22.261 6.933c0.852 0.006 1.54 0.698 1.54 1.551 0 0.857-0.694 1.551-1.551 1.551-0.828 0-1.505-0.65-1.549-1.467l-0-0.004-3.245-0.684-1 4.682c2.185 0.049 4.201 0.737 5.878 1.884l-0.037-0.024c0.38-0.379 0.905-0.614 1.485-0.614 0.008 0 0.017 0 0.025 0h-0.001c1.21 0.001 2.191 0.982 2.192 2.192v0c-0.007 0.88-0.513 1.64-1.249 2.011l-0.013 0.006c0.033 0.191 0.052 0.412 0.052 0.637 0 0.005 0 0.009-0 0.014v-0.001c0 3.367-3.911 6.086-8.752 6.086s-8.752-2.719-8.752-6.086c0-0.001 0-0.003 0-0.005 0-0.234 0.020-0.463 0.057-0.687l-0.003 0.024c-0.771-0.35-1.298-1.114-1.298-2.001 0-1.21 0.981-2.191 2.191-2.191 0 0 0.001 0 0.001 0h-0c0.586 0.006 1.116 0.238 1.509 0.613l-0.001-0.001c1.66-1.148 3.711-1.841 5.924-1.858l0.004-0 1.106-5.226c0.028-0.103 0.090-0.189 0.173-0.245l0.002-0.001c0.063-0.037 0.139-0.059 0.22-0.059 0.027 0 0.054 0.003 0.080 0.007l-0.003-0 3.631 0.771c0.247-0.522 0.77-0.876 1.375-0.876 0.003 0 0.007 0 0.010 0h-0.001zM16 1.004c0 0 0 0-0 0-8.282 0-14.996 6.714-14.996 14.996s6.714 14.996 14.996 14.996c8.282 0 14.996-6.714 14.996-14.996 0-4.141-1.678-7.89-4.392-10.604v0c-2.714-2.714-6.463-4.392-10.604-4.392v0z"/></svg>
+            Reddit
+        </a>
+        <a class="contact__btn" href="https://steamcommunity.com/id/solune-irl/" target="_blank" rel="noopener noreferrer">
+            <svg width="18" height="18" viewBox="-1.5 0 259 259" fill="currentColor" role="img" aria-hidden="true"><path d="M127.778579,0 C60.4203546,0 5.24030561,52.412282 0,119.013983 L68.7236558,147.68805 C74.5451924,143.665561 81.5845466,141.322185 89.1497766,141.322185 C89.8324924,141.322185 90.5059824,141.340637 91.1702465,141.377541 L121.735621,96.668877 L121.735621,96.0415165 C121.735621,69.1388208 143.425688,47.2457835 170.088511,47.2457835 C196.751333,47.2457835 218.441401,69.1388208 218.441401,96.0415165 C218.441401,122.944212 196.751333,144.846475 170.088511,144.846475 C169.719475,144.846475 169.359666,144.83725 168.99063,144.828024 L125.398299,176.205276 C125.425977,176.786507 125.444428,177.367738 125.444428,177.939743 C125.444428,198.144443 109.160732,214.575753 89.1497766,214.575753 C71.5836817,214.575753 56.8868387,201.917832 53.5655182,185.163615 L4.40997549,164.654462 C19.6326942,218.967277 69.0834655,258.786219 127.778579,258.786219 C198.596511,258.786219 256,200.847629 256,129.393109 C256,57.9293643 198.596511,0 127.778579,0 Z M80.3519677,196.332478 L64.6033732,189.763644 C67.389592,195.63131 72.2239585,200.539484 78.6359521,203.233444 C92.4932392,209.064206 108.472481,202.430791 114.247888,188.435116 C117.043333,181.663313 117.061785,174.190342 114.294018,167.400086 C111.526251,160.609831 106.295171,155.31417 99.5879487,152.491048 C92.9176301,149.695603 85.7767911,149.797088 79.5031858,152.186594 L95.777656,158.976849 C105.999942,163.276114 110.834309,175.122157 106.571948,185.436702 C102.318812,195.751247 90.574254,200.631743 80.3519677,196.332478 Z M202.30901,96.0424391 C202.30901,78.1165345 187.85204,63.5211763 170.092201,63.5211763 C152.323137,63.5211763 137.866167,78.1165345 137.866167,96.0424391 C137.866167,113.968344 152.323137,128.554476 170.092201,128.554476 C187.85204,128.554476 202.30901,113.968344 202.30901,96.0424391 Z M145.938821,95.9870838 C145.938821,82.4988323 156.779242,71.5661525 170.138331,71.5661525 C183.506646,71.5661525 194.347066,82.4988323 194.347066,95.9870838 C194.347066,109.475335 183.506646,120.408015 170.138331,120.408015 C156.779242,120.408015 145.938821,109.475335 145.938821,95.9870838 Z"/></svg>
+            Steam
+        </a>
+    </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="site-footer">
+    <p class="site-footer__line">The Avian Atlas &middot; Vol I</p>
+    <p class="site-footer__meta">
+        Est. 2026, Made by
+        <button type="button" class="footer-credit-btn" id="aboutMeToggle" aria-expanded="false" aria-controls="aboutMe">Solune</button>
+    </p>
+</footer>
+
+<!-- ============ ABOUT ME (toggled open from the footer credit) ============ -->
+<section class="about-me" id="aboutMe" hidden>
+    <div class="about-me__board">
+        <span class="about-me__sticker about-me__sticker--star" aria-hidden="true">✦</span>
+        <span class="about-me__sticker about-me__sticker--bird" aria-hidden="true">🕊</span>
+        <span class="about-me__sticker about-me__sticker--heart" aria-hidden="true">♥</span>
+
+        <div class="tag about-me__tag">
+            <span class="tag__hole"></span>
+            Shh &nbsp;&middot;&nbsp; You found the secret page
+        </div>
+
+        <div class="about-me__grid">
+            <div class="scrap scrap--note">
+                <span class="washi-tape washi-tape--corner"></span>
+                <h2 class="about-me__title">About Me</h2>
+                <p class="about-me__text">
+                    Hi, I'm Solune! And I'm someone who really enjoys discovering things, getting curious about the little details. If something makes me wonder "wait, what is that?", there's a pretty good chance I'll end up researching it for the next three hours.
+                </p>
+                <p class="about-me__text">
+                    When I'm not being a total nerd, you'll probably find me dancing, exploring nature, and being all whimsical. I love getting lost in nature, wandering through new places, watching birds and animals, and finding little moments of magic wherever I go!
+
+                </p>
+            </div>
+
+            <div class="scrap scrap--facts">
+                <span class="washi-tape washi-tape--top washi-tape--wine"></span>
+                <p class="fact-card__title">A few fun facts</p>
+                <div class="fact-card__grid">
+                    <div class="fact-tile">
+                        <span class="fact-tile__label">Favourite Birb</span>
+                        <span class="fact-tile__value">Blue Jay</span>
+                    </div>
+                    <div class="fact-tile">
+                        <span class="fact-tile__label">Favourite Game</span>
+                        <span class="fact-tile__value">Minecraft</span>
+                    </div>
+                    <div class="fact-tile">
+                        <span class="fact-tile__label">Favourite Hobbies</span>
+                        <span class="fact-tile__value">Sketching<br>Painting<br>Reading<br>Dancing<br>Playing Guitar<br>Rock Climbing</span>
+                    </div>
+                </div>
+            </div>
+
+            <figure class="scrap scrap--photo">
+                <span class="washi-tape washi-tape--top"></span>
+                <img class="scrap__img" src="Assets/Resources/Solune.png" alt="A photo of Solune" />
+                <figcaption class="about-me__caption">Probably out looking for birds!</figcaption>
+            </figure>
+        </div>
+    </div>
+</section>
+
+<!-- ============ LOGBOOK (its own section, revealed together with About Me) ============ -->
+<section class="logbook-section" id="logbook" hidden>
+    <div class="logbook-section__inner">
+        <h2 class="logbook-section__heading">The Logbook</h2>
+        <p class="logbook-section__sub">I love keeping track of everything I do! There are just too many fun and wonderful things happening to let them slip away. :D</p>
+
+        <div class="logbook__tabs" role="tablist" aria-label="Logbook">
+            <button type="button" class="logbook__tab is-active" id="logTabDev" role="tab" aria-selected="true" aria-controls="logPanelDev">Dev Log</button>
+            <button type="button" class="logbook__tab" id="logTabBirds" role="tab" aria-selected="false" aria-controls="logPanelBirds">Birb Log</button>
+        </div>
+
+        <div class="logbook__panel logbook__panel--dev" id="logPanelDev" role="tabpanel"></div>
+        <div class="logbook__panel" id="logPanelBirds" role="tabpanel" hidden></div>
+    </div>
+</section>
+
+<script src="app.js"></script>
+</body>
+</html>

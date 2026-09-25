@@ -1,0 +1,3068 @@
+/* =========================================================
+   TOKENS — naturalist's field-journal palette
+   Cream and brown throughout: morning-cream surfaces, brass/gold
+   leaf, aged paper, wine, and warm umber accents.
+   ========================================================= */
+:root {
+    /* warm surfaces: cream morning-light through to coffee-brown grounding */
+    --color-page:         #FBF3E4;
+    --color-surface:      #F5EAD8;
+    --color-surface-2:    #EEDDBE;
+    --color-border:       #E3CBA4;
+    --color-border-soft:  #ECDCBC;
+    --color-surface-deep: #4E3B28;
+
+    --color-paper:      #FFFBF2;
+    --color-paper-2:    #F8EFDC;
+    --color-paper-dim:  #F1E3C6;
+
+    --color-accent-gold:          #C6862F;
+    --color-accent-gold-bright:   #E3A94E;
+    --color-accent-wine:          #A24B45;
+    --color-accent-wine-bright:   #C15F55;
+    --color-accent-umber:         #8B5E34;
+
+    --text-primary:       #3E2E20;
+    --text-secondary:     #8A7256;
+    --text-onsurface:     #40301F;
+    --text-onsurface-dim: #8A7660;
+    --text-oninverse-dim: #CBB799;
+
+    --display: "Fraunces", "Georgia", serif;
+    --body:    "Work Sans", "Helvetica Neue", sans-serif;
+    --mono:    "Space Mono", "Courier New", monospace;
+    --hand:    "Caveat", "Segoe Script", cursive;
+
+    --radius: 10px;
+    --ease: cubic-bezier(0.22, 0.85, 0.28, 1);
+}
+
+* { box-sizing: border-box; }
+
+html {
+    scroll-behavior: smooth;
+    /* safety net against stray horizontal scroll on narrow phones.
+       Deliberately NOT set on body: overflow-x on body turns it into
+       its own scroll container, which silently breaks position:sticky
+       for elements inside it (this is what was capping the sidebar). */
+    overflow-x: hidden;
+    width: 100%;
+}
+
+/* Chromium now supports the standard `scrollbar-color`/`scrollbar-width`
+   properties, and when both those AND ::-webkit-scrollbar-* pseudo-elements
+   are present, the standard properties win — flattening our gradient/
+   animated thumb down to one plain color. Firefox has no ::-webkit-scrollbar
+   support at all, so it's the only browser that actually needs
+   scrollbar-color; scoping it to browsers that lack ::-webkit-scrollbar
+   support keeps it out of Chromium/Safari's way. */
+@supports not selector(::-webkit-scrollbar) {
+    html {
+        scrollbar-width: auto;
+        scrollbar-color: var(--color-surface-deep) var(--color-surface-2);
+    }
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-surface-2);
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--color-surface-deep);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-accent-gold);
+}
+
+::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* one-shot fade/rise reveal for sections as they scroll into view,
+   toggled by IntersectionObserver in app.js */
+.reveal-on-scroll {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+}
+
+.reveal-on-scroll.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* confetti burst — spawned by app.js on game-select / card-open,
+   removed from the DOM once its fall animation finishes */
+.confetti-piece {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    background: var(--piece-color, var(--color-accent-gold));
+    pointer-events: none;
+    z-index: 500;
+    will-change: transform, opacity;
+    animation: confetti-fall var(--piece-duration, 0.9s) cubic-bezier(0.2, 0.7, 0.4, 1) forwards;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translate(var(--piece-x0, 0), var(--piece-y0, 0)) rotate(0deg) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(var(--piece-x1, 0), var(--piece-y1, 0)) rotate(var(--piece-spin, 360deg)) scale(0.4);
+        opacity: 0;
+    }
+}
+
+body {
+    margin: 0;
+    background:
+            radial-gradient(ellipse 60% 45% at 18% 0%, rgba(139, 94, 52, 0.10), transparent 60%),
+            radial-gradient(ellipse 55% 40% at 100% 30%, rgba(198, 134, 47, 0.12), transparent 60%),
+            var(--color-page);
+    color: var(--text-onsurface);
+    font-family: var(--body);
+    -webkit-font-smoothing: antialiased;
+}
+
+img { max-width: 100%; display: block; }
+
+a { color: inherit; }
+
+::selection {
+    background: var(--color-accent-gold);
+    color: var(--color-paper);
+}
+
+:focus-visible {
+    outline: 2px solid var(--color-accent-gold-bright);
+    outline-offset: 3px;
+}
+
+/* faint laid-paper texture across the whole page */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.05;
+    background-image:
+            repeating-linear-gradient(0deg, transparent, transparent 2px, #4a3826 2px, #4a3826 3px);
+}
+
+/* --- rave-mode background wash: a slow-rotating rainbow glow behind
+   everything while the music plays. Same oklch "longer hue" trick as
+   the tag/pin — two identical color stops, interpolated the long way
+   round, so one rotating conic-gradient sweeps the full spectrum with
+   no hard seams. soft-light blend keeps it a colorful tint rather than
+   an opaque wash, so body copy and cards stay fully readable on top. */
+@property --bg-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    inset: -10vmax;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    mix-blend-mode: soft-light;
+    background: conic-gradient(from var(--bg-angle) in oklch longer hue, oklch(0.78 0.19 30), oklch(0.78 0.19 30));
+    transition: opacity 0.7s ease-out;
+    animation: rainbow-angle-bg 10s linear infinite;
+    animation-play-state: paused;
+}
+
+body.music-playing::after {
+    opacity: 0.5;
+    animation-duration: 4s;
+    animation-play-state: running;
+}
+
+/* while the color-splash burst is still playing (first click only), hold
+   the page-wide rave wash at bay — otherwise it starts spinning behind
+   the splash's own cream/brown fill before the fill has finished
+   expanding, and the two blends read as one confused rainbow. */
+body.music-playing.rave-hold::after {
+    opacity: 0 !important;
+    animation-play-state: paused !important;
+}
+
+@keyframes rainbow-angle-bg {
+    to { --bg-angle: 360deg; }
+}
+
+/* a second, faster-pulsing glow layered on <html> — gives rave mode an
+   extra "beat" without touching body's own pseudo-elements. Peaks
+   quickly then eases back, like a slow strobe rather than a hard flash. */
+html::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    mix-blend-mode: overlay;
+    background: radial-gradient(circle at 50% 35%, oklch(0.85 0.2 320 / 0.9), transparent 62%);
+    transform: scale(1);
+}
+
+html.music-playing::after {
+    animation: rave-pulse 1.3s ease-in-out infinite;
+}
+
+html.music-playing.rave-hold::after {
+    opacity: 0 !important;
+    animation-play-state: paused !important;
+}
+
+@keyframes rave-pulse {
+    0%, 100% { opacity: 0.18; transform: scale(1); }
+    50%      { opacity: 0.5;  transform: scale(1.18); }
+}
+
+/* --- the search box, contact panel, and footer are structural chrome,
+   not clickable/accent elements — same category as body copy, headings
+   and the game list, which the RAVE MODE section below deliberately
+   leaves alone. Every attempt to light these three up (a spinning fill,
+   then a glowing ring) kept feeling mismatched for the same reason: as
+   background surfaces they're not meant to join the rainbow at all, so
+   they're left untouched during rave mode. The actual buttons inside
+   the contact panel (.contact__btn) still get their own proper ring,
+   same as any other clickable control. */
+
+@media (prefers-reduced-motion: reduce) {
+    body.music-playing::after,
+    html.music-playing::after {
+        animation: none;
+        opacity: 0.3;
+    }
+}
+
+/* =========================================================
+   HERO — a field permit: half ledger, half specimen mount.
+   One orchestrated load sequence: a flight route draws itself
+   across the scene, a photo drops in on a pin, then a
+   verification seal stamps down last. Nothing else moves
+   until the visitor scrolls or clicks.
+   ========================================================= */
+.hero {
+    position: relative;
+    min-height: 100vh;
+    /* dvh accounts for mobile browser chrome so the hero doesn't
+       overshoot the real visible viewport and leave a jumpy gap */
+    min-height: 100dvh;
+    display: flex;
+    align-items: stretch;
+    border-bottom: 1px solid var(--color-border);
+    overflow: hidden;
+}
+
+.hero__content {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 65%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 6rem 4vw 4rem 6vw;
+}
+
+/* right side: a full-bleed photo, feathered into the cream on its inner edge */
+.hero__visual {
+    position: relative;
+    flex: 0 0 35%;
+    min-height: 26rem;
+    overflow: hidden;
+    background: linear-gradient(160deg, var(--color-surface-2), var(--color-surface));
+}
+
+.hero__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 9%);
+    mask-image: linear-gradient(to right, transparent, #000 9%);
+    transform: scale(1.08) translate(calc(var(--parallax-x, 0) * 1px), calc(var(--parallax-y, 0) * 1px));
+    transition: transform 0.2s linear;
+}
+
+@media (max-width: 900px) {
+    .hero {
+        flex-direction: column;
+    }
+    .hero__visual {
+        order: -1;
+        flex-basis: auto;
+        min-height: 46vh;
+    }
+    .hero__img {
+        -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12%);
+        mask-image: linear-gradient(to bottom, transparent, #000 12%);
+    }
+    .hero__content {
+        max-width: none;
+        padding: 3rem 6vw 3.5rem;
+    }
+}
+
+/* =========================================================
+   PHONE — tighten spacing, drop hover-only affordances,
+   and stop long labels/wide grids from forcing a scrollbar.
+   ========================================================= */
+@media (max-width: 480px) {
+    .hero__visual {
+        min-height: 34vh;
+    }
+
+    .hero__content {
+        padding: 2.5rem 6vw 3rem;
+    }
+
+    .tag {
+        font-size: 0.95rem;
+        white-space: normal;
+        text-align: center;
+    }
+
+    .hero__title {
+        max-width: none;
+        font-size: clamp(2rem, 9vw, 2.6rem);
+    }
+
+    .hero__sub {
+        max-width: none;
+        font-size: 0.96rem;
+    }
+
+    .music-line {
+        font-size: 0.88rem;
+    }
+
+    .ledger {
+        max-width: none;
+    }
+
+    /* long labels like "Community Sidekicks" no longer force nowrap
+       overflow on a narrow phone — let the row wrap instead */
+    .ledger__row {
+        flex-wrap: wrap;
+        gap: 0.3rem 0.6rem;
+    }
+
+    .ledger__row dt {
+        white-space: normal;
+        font-size: 0.85rem;
+    }
+
+    .ledger__dots {
+        display: none;
+    }
+
+    .board {
+        padding: 2rem 5vw 3.5rem;
+    }
+
+    .board__grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1.1rem;
+    }
+
+    .contact {
+        padding: 2rem 6vw;
+    }
+
+    .contact__btn {
+        padding: 0.7rem 1.25rem;
+        font-size: 0.88rem;
+    }
+
+    .lightbox {
+        padding: 3vh 3vw;
+    }
+
+    .lightbox__close,
+    .lightbox__nav {
+        width: 2.6rem;
+        height: 2.6rem;
+    }
+
+    .lightbox__mat {
+        --mat-pad: 0.75rem;
+    }
+
+    .lightbox__caption-title {
+        font-size: 1.1rem;
+    }
+}
+
+/* the eyebrow, reimagined as an actual paper tag with a punched hole */
+.tag {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.01em;
+    color: var(--color-accent-wine);
+    background: var(--color-surface-2);
+    border: 1px dashed var(--color-border);
+    border-radius: 20px;
+    padding: 0.4rem 1rem 0.4rem 0.75rem;
+    margin: 0 0 1.6rem;
+    opacity: 0;
+    animation: tag-in 0.5s var(--ease) forwards 0.2s;
+    z-index: 0;
+}
+
+.tag__hole {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-page);
+    box-shadow: inset 0 0 0 1px var(--color-border);
+    flex-shrink: 0;
+}
+
+/* registered so the browser can smoothly animate its value */
+@property --tag-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+
+/* rainbow border + halo, hidden and stationary until music is playing.
+   Uses the oklch "longer hue" trick: interpolating a conic-gradient
+   between the *same* color, the long way around the hue wheel, walks
+   through the full spectrum smoothly with just one color variable.
+   The gradient's start angle is what animates — the pill itself
+   never rotates, so the shape stays perfectly still. */
+.tag {
+    --glow-color: oklch(0.78 0.19 30);
+    isolation: isolate;
+}
+
+/* soft blurred glow sitting behind the pill */
+.tag::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    z-index: -2;
+    border-radius: 24px;
+    background: conic-gradient(from var(--tag-angle) in oklch longer hue, var(--glow-color), var(--glow-color));
+    filter: blur(11px);
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+    animation: rainbow-angle 3s linear infinite;
+    animation-play-state: paused;
+    pointer-events: none;
+}
+
+/* crisp ring sitting exactly on the pill's own border line */
+.tag::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border-radius: 21px;
+    padding: 1px;
+    background: conic-gradient(from var(--tag-angle) in oklch longer hue, var(--glow-color), var(--glow-color));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.35s var(--ease);
+    animation: rainbow-angle 3s linear infinite;
+    animation-play-state: paused;
+    pointer-events: none;
+}
+
+body.music-playing:not(.rave-hold) .tag {
+    border-color: transparent;
+    color: #fff;
+}
+
+body.music-playing:not(.rave-hold) .tag::before,
+body.music-playing:not(.rave-hold) .tag::after {
+    opacity: 1;
+    animation-duration: 1.4s;
+    animation-play-state: running;
+}
+
+@keyframes rainbow-angle {
+    to { --tag-angle: 360deg; }
+}
+
+/* the "jump into it" CTA: a gentle, inviting bounce so it reads as clickable */
+.tag--cta {
+    animation: tag-in 0.5s var(--ease) forwards 0.2s,
+    tag-bounce 2.4s ease-in-out infinite 1s;
+    transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.tag-cta__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.tag--cta:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 10px 22px rgba(59, 42, 28, 0.18);
+    animation-play-state: paused;
+}
+
+@keyframes tag-bounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-4px); }
+}
+
+/* music line: plain text, no pill, just darkens on hover */
+.music-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--body);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 1.3rem 0 0;
+    cursor: pointer;
+    opacity: 0;
+    animation: rise-in 0.6s var(--ease) forwards 0.65s;
+    transition: color 0.2s var(--ease);
+}
+
+.music-line:hover,
+.music-line:focus-visible {
+    color: var(--text-primary);
+}
+
+.music-line__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.music-line__icon svg {
+    width: 1em;
+    height: 1em;
+}
+
+.music-line.is-playing .music-line__icon {
+    animation: music-pulse 1.1s ease-in-out infinite;
+}
+
+.hero__title {
+    font-family: var(--display);
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-size: clamp(2.4rem, 4.8vw, 4rem);
+    line-height: 1.08;
+    margin: 0;
+    color: var(--text-primary);
+    max-width: 15ch;
+    letter-spacing: -0.01em;
+    opacity: 0;
+    animation-name: rise-in;
+    animation-duration: 0.6s;
+    animation-timing-function: var(--ease);
+    animation-fill-mode: forwards;
+    animation-delay: 0.35s;
+}
+
+.hero__sub {
+    margin: 1.4rem 0 0;
+    max-width: 40ch;
+    font-size: 1.02rem;
+    line-height: 1.65;
+    color: var(--text-secondary);
+    opacity: 0;
+    animation: rise-in 0.6s var(--ease) forwards 0.5s;
+}
+
+@keyframes music-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.12); }
+}
+
+.hero__scroll {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 2.1rem;
+    font-family: var(--body);
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-accent-gold);
+    padding-bottom: 0.15rem;
+    opacity: 0;
+    animation: rise-in 0.6s var(--ease) forwards 0.8s;
+    transition: color 0.2s var(--ease), border-color 0.2s var(--ease), gap 0.2s var(--ease);
+}
+
+.hero__scroll svg { transition: transform 0.2s var(--ease); }
+
+.hero__scroll:hover {
+    color: var(--color-accent-gold-bright);
+    border-color: var(--color-accent-gold-bright);
+    gap: 0.7rem;
+}
+
+.hero__scroll:hover svg { transform: translateY(2px); }
+
+/* stats as a ledger line-item, not a big-number stat block */
+.ledger {
+    margin: 3rem 0 0;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--color-border);
+    max-width: 26rem;
+    opacity: 0;
+    animation: rise-in 0.6s var(--ease) forwards 0.95s;
+}
+
+.ledger__title {
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: 1.2rem;
+    letter-spacing: 0.01em;
+    color: var(--color-accent-wine);
+    margin: 0 0 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.ledger__title-icon {
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+    color: var(--color-accent-umber);
+}
+
+.ledger__row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    font-family: var(--body);
+    margin: 0 0 0.55rem;
+}
+
+.ledger__row dt {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    white-space: nowrap;
+}
+
+.ledger__dots {
+    flex: 1;
+    border-bottom: 1px dotted var(--color-border);
+    transform: translateY(-0.3em);
+}
+
+.ledger__row dd {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 1.3rem;
+    color: var(--color-accent-gold-bright);
+}
+
+@keyframes tag-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes rise-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tag, .hero__title, .hero__sub, .music-line, .hero__scroll, .ledger {
+        opacity: 1;
+        animation: none;
+        transform: none;
+    }
+}
+
+/* =========================================================
+   MAIN LAYOUT — sidebar + specimen board
+   ========================================================= */
+.collection {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/* --- sidebar: ledger index of games --- */
+/* outer box: purely visual — stretches to match the board's full
+   height (as a normal grid item) so the background/border never
+   "caps" early just because the game list itself is short */
+.sidebar {
+    background: var(--color-surface);
+    border-right: 1px dashed var(--color-border);
+    align-self: stretch;
+    min-height: 100%;
+}
+
+/* inner panel: this is what actually pins to the viewport and
+   scrolls internally once the list is longer than one screen */
+.sidebar__sticky {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 2.5rem 0 1.5rem;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+    .sidebar__sticky {
+        scrollbar-width: auto;
+        scrollbar-color: var(--color-surface-deep) var(--color-surface-2);
+    }
+}
+
+.sidebar__sticky::-webkit-scrollbar { width: 6px; }
+.sidebar__sticky::-webkit-scrollbar-track { background: var(--color-surface-2); }
+.sidebar__sticky::-webkit-scrollbar-thumb {
+    background-color: var(--color-surface-deep);
+}
+.sidebar__sticky::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-accent-gold);
+}
+.sidebar__sticky::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+
+.sidebar__label {
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: 0.01em;
+    color: var(--color-accent-wine);
+    padding: 0 1.75rem;
+    margin: 0 0 1.1rem;
+}
+
+.sidebar__search-wrap {
+    position: relative;
+    padding: 0 1.75rem;
+    margin: 0 0 1.25rem;
+}
+
+.sidebar__search-icon {
+    position: absolute;
+    left: calc(1.75rem + 0.65rem);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-oninverse-dim);
+    pointer-events: none;
+}
+
+.sidebar__search {
+    width: 100%;
+    background: var(--color-surface-deep);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-paper);
+    font-family: var(--body);
+    /* 16px min — anything smaller makes iOS Safari zoom in on focus */
+    font-size: max(0.85rem, 16px);
+    padding: 0.55rem 0.75rem 0.55rem 2.15rem;
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.sidebar__search::placeholder {
+    color: var(--text-oninverse-dim);
+}
+
+.sidebar__search:focus-visible {
+    outline: none;
+    border-color: var(--color-accent-gold);
+    box-shadow: 0 0 0 3px rgba(198, 134, 47, 0.22);
+}
+
+.game-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.game-list__empty {
+    font-family: var(--body);
+    font-size: 0.85rem;
+    color: var(--text-onsurface-dim);
+    padding: 1rem 1.75rem 0;
+    margin: 0;
+}
+
+.game-item {
+    border-top: 1px solid var(--color-border-soft);
+}
+.game-item:last-child { border-bottom: 1px solid var(--color-border-soft); }
+
+.game-btn {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    gap: 0.9rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    padding: 0.95rem 1.75rem;
+    color: var(--text-onsurface-dim);
+    font-family: var(--body);
+    font-size: 0.96rem;
+    position: relative;
+    transition: color 0.2s var(--ease), background 0.2s var(--ease), padding-left 0.25s var(--ease);
+}
+
+.game-btn:hover {
+    color: var(--text-primary);
+    background: rgba(198, 134, 47, 0.1);
+    padding-left: 2.05rem;
+}
+
+.game-btn__index {
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    color: var(--color-accent-umber);
+    flex-shrink: 0;
+    display: inline-block;
+}
+
+.game-btn:hover .game-btn__index {
+    animation: index-hop 0.4s var(--ease);
+}
+
+@keyframes index-hop {
+    0%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-3px); }
+}
+
+.game-btn__count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-onsurface-dim);
+    opacity: 0.75;
+}
+
+.game-item.active .game-btn {
+    color: var(--text-primary);
+    background: rgba(198, 134, 47, 0.14);
+    border-left: 2px solid var(--color-accent-gold);
+    padding-left: calc(1.75rem - 2px);
+}
+
+.game-item.active .game-btn__index { color: var(--color-accent-gold-bright); }
+
+/* Mobile overrides for the sidebar + collection layout. This must come
+   AFTER the unconditional .sidebar/.game-list/.game-item rules above —
+   same-specificity selectors resolve by source order, so placing this
+   media query any earlier lets those later base rules silently win and
+   re-apply the full-height desktop sidebar on mobile. */
+@media (max-width: 780px) {
+    .collection {
+        /* switch off grid entirely on mobile — a grid row can still get
+           stretched to fill leftover space depending on content sizing,
+           which is what was leaving a gap under the sidebar. Plain
+           block stacking has no such ambiguity. */
+        display: block;
+        min-height: 0;
+    }
+    .sidebar {
+        min-height: 0;
+    }
+    .sidebar__sticky {
+        position: static;
+        height: auto;
+        overflow-y: visible;
+    }
+    /* keep the game list itself glanceable on mobile — about 5 games
+       tall, scrollable in place — instead of a long list you have to
+       scroll through just to reach the collection below */
+    .game-list {
+        max-height: 16rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        border-top: 1px solid var(--color-border-soft);
+        border-bottom: 1px solid var(--color-border-soft);
+    }
+    @supports not selector(::-webkit-scrollbar) {
+        .game-list {
+            scrollbar-width: auto;
+            scrollbar-color: var(--color-surface-deep) var(--color-surface-2);
+        }
+    }
+    .game-list::-webkit-scrollbar { width: 6px; }
+    .game-list::-webkit-scrollbar-track { background: var(--color-surface-2); }
+    .game-list::-webkit-scrollbar-thumb {
+        background-color: var(--color-surface-deep);
+    }
+    .game-list::-webkit-scrollbar-thumb:hover {
+        background-color: var(--color-accent-gold);
+    }
+    .game-list::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+    /* the list already draws its own top/bottom border above, so drop
+       the per-item ones to avoid a doubled line at the edges */
+    .game-item:first-child { border-top: none; }
+    .game-item:last-child { border-bottom: none; }
+
+    .board {
+        min-height: 0;
+    }
+}
+
+/* --- board: header + specimen grid --- */
+.board {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2.75rem 3vw 5rem;
+}
+
+.board__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 1.25rem;
+    margin-bottom: 2.25rem;
+}
+
+.board__header--enter {
+    animation: header-fade 0.4s var(--ease);
+}
+
+@keyframes header-fade {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.board__title {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: clamp(1.6rem, 3vw, 2.3rem);
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.board__meta {
+    font-family: var(--body);
+    font-size: 0.82rem;
+    color: var(--color-accent-umber);
+}
+
+.board__header-right {
+    display: flex;
+    align-items: baseline;
+    gap: 1.1rem;
+    flex-wrap: wrap;
+}
+
+.board__sort-label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--body);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-onsurface-dim);
+    background: var(--color-surface-2);
+    border: 1px dashed var(--color-border);
+    border-radius: 999px;
+    padding: 0.4rem 0.9rem 0.4rem 0.75rem;
+    transition: border-color 0.2s var(--ease), background 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.board__sort-label:hover,
+.board__sort-label:focus-within {
+    border-color: var(--color-accent-gold);
+    background: var(--color-paper);
+    box-shadow: 0 0 0 3px rgba(198, 134, 47, 0.16);
+}
+
+.board__sort-icon {
+    align-self: center;
+    flex-shrink: 0;
+    color: var(--color-accent-umber);
+    transition: color 0.2s var(--ease);
+}
+
+.board__sort-label:hover .board__sort-icon,
+.board__sort-label:focus-within .board__sort-icon {
+    color: var(--color-accent-gold);
+}
+
+.board__sort {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238B5E34' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right center / 1em;
+    border: none;
+    color: var(--text-primary);
+    font-family: var(--body);
+    font-size: 0.8rem;
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
+    padding: 0 1.4rem 0 0.15rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.board__sort:focus-visible {
+    outline: none;
+}
+
+/* rave mode: the same rainbow halo + crisp ring as .tag, sized to
+   fit this pill, since this control is shaped just like a tag. */
+.board__sort-label {
+    --glow-color: oklch(0.78 0.19 30);
+    isolation: isolate;
+}
+
+.board__sort-label::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    z-index: -2;
+    border-radius: 999px;
+    background: conic-gradient(from var(--tag-angle) in oklch longer hue, var(--glow-color), var(--glow-color));
+    filter: blur(11px);
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+    animation: rainbow-angle 3s linear infinite;
+    animation-play-state: paused;
+    pointer-events: none;
+}
+
+.board__sort-label::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border-radius: 999px;
+    padding: 1px;
+    background: conic-gradient(from var(--tag-angle) in oklch longer hue, var(--glow-color), var(--glow-color));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.35s var(--ease);
+    animation: rainbow-angle 3s linear infinite;
+    animation-play-state: paused;
+    pointer-events: none;
+}
+
+body.music-playing:not(.rave-hold) .board__sort-label {
+    border-color: transparent;
+    color: #fff;
+}
+
+body.music-playing:not(.rave-hold) .board__sort-label::before,
+body.music-playing:not(.rave-hold) .board__sort-label::after {
+    opacity: 1;
+    animation-duration: 1.4s;
+    animation-play-state: running;
+}
+
+body.music-playing:not(.rave-hold) .board__sort-icon {
+    color: #fff;
+}
+
+body.music-playing:not(.rave-hold) .board__sort {
+    color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* hidden entirely until a game is selected — matches boardMeta being empty */
+.board__sort-label[hidden] {
+    display: none;
+}
+
+.board__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.6rem;
+}
+
+/* =========================================================
+   SPECIMEN CARD — plated, field-guide illustration feel
+   Each card cycles through three named accents set in app.js
+   (gold / wine / umber) rather than a full rainbow — a quieter,
+   more considered palette in keeping with the rest of the page.
+   ========================================================= */
+.specimen {
+    --accent: var(--color-accent-gold);
+    background: var(--color-paper);
+    color: var(--text-primary);
+    border-radius: var(--radius);
+    position: relative;
+    padding: 0.9rem 0.9rem 1.1rem;
+    box-shadow: 0 10px 22px rgba(64, 48, 31, 0.16);
+    transform: rotate(calc(var(--tilt, 0deg) + var(--wiggle, 0deg)));
+    transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
+    opacity: 0;
+    animation: rise 0.6s var(--ease) forwards;
+    animation-delay: var(--delay, 0ms);
+    border-bottom: 3px solid var(--accent);
+}
+
+@keyframes rise {
+    from { opacity: 0; transform: translateY(12px) rotate(var(--tilt, 0deg)); }
+    to   { opacity: 1; transform: translateY(0) rotate(var(--tilt, 0deg)); }
+}
+
+.specimen:hover {
+    transform: rotate(var(--wiggle, 0deg)) translateY(-5px);
+    box-shadow: 0 20px 32px rgba(64, 48, 31, 0.22), 0 0 0 1px var(--accent);
+    z-index: 2;
+}
+
+/* pin, colored per-card accent */
+.specimen::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: color-mix(in oklch, var(--accent) 45%, white);
+    box-shadow: 0 2px 4px rgba(64, 48, 31, 0.25);
+    z-index: 1;
+}
+
+/* small cast shadow the pin drops onto the card surface just below it,
+   so the two read as one object instead of a dot floating over the top edge */
+.specimen::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 18px;
+    height: 5px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(64, 48, 31, 0.16), transparent 70%);
+    pointer-events: none;
+}
+
+.specimen__frame {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 6px;
+    background: var(--color-paper-dim);
+    border: 1px solid rgba(42, 35, 24, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* a light streak that sweeps across the photo once on hover — playful,
+   not distracting, and doesn't run again until the pointer leaves and re-enters */
+.specimen__frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.55) 50%, transparent 58%);
+    transform: translateX(-130%);
+    pointer-events: none;
+}
+
+.specimen:hover .specimen__frame::after {
+    animation: shine-sweep 0.85s var(--ease);
+}
+
+body.music-playing:not(.rave-hold) .specimen__frame::after {
+    animation: shine-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes shine-sweep {
+    to { transform: translateX(130%); }
+}
+
+.specimen__frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.5s var(--ease);
+}
+
+.specimen:hover .specimen__frame img {
+    transform: scale(1.035);
+}
+
+.specimen__frame .placeholder-icon {
+    width: 42%;
+    color: var(--accent);
+    opacity: 0.55;
+}
+
+.specimen__id {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    font-weight: 700;
+    margin: 0.7rem 0 0.15rem;
+}
+
+.specimen__title {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 1.05rem;
+    line-height: 1.3;
+    margin: 0;
+}
+
+.specimen__credit {
+    font-family: var(--body);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin: 0.4rem 0 0;
+}
+
+/* =========================================================
+   SKELETON CARDS — shimmering placeholders shown in the board
+   grid while data.csv is still being fetched, so the first
+   paint isn't just an empty box. Reuses .specimen's shape/pin
+   but skips the rise-in animation and any interactivity.
+   ========================================================= */
+.specimen--skeleton {
+    opacity: 1;
+    animation: none;
+    transform: none;
+    cursor: default;
+    pointer-events: none;
+    border-bottom-color: var(--color-border-soft);
+}
+
+.specimen--skeleton::before,
+.specimen--skeleton::after {
+    background: var(--color-border-soft);
+}
+
+.specimen--skeleton .specimen__frame,
+.skeleton-line {
+    background: linear-gradient(100deg,
+    var(--color-paper-dim) 25%,
+    var(--color-surface-2) 50%,
+    var(--color-paper-dim) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+    animation-delay: var(--delay, 0ms);
+}
+
+.skeleton-line {
+    border-radius: 4px;
+}
+
+.skeleton-line--id {
+    width: 42%;
+    height: 0.6em;
+    margin: 0.75rem 0 0.35rem;
+}
+
+.skeleton-line--title {
+    width: 78%;
+    height: 1rem;
+}
+
+@keyframes skeleton-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .specimen--skeleton .specimen__frame,
+    .skeleton-line {
+        animation: none;
+        background: var(--color-paper-dim);
+    }
+}
+
+/* empty state */
+.board__empty {
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: var(--text-secondary);
+    padding: 3.5rem 2rem;
+    text-align: center;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius);
+    max-width: 30rem;
+    margin: 0 auto;
+}
+
+/* fetch-error notice (file:// protocol) */
+.notice {
+    margin: 2rem 6vw 0;
+    padding: 1rem 1.25rem;
+    background: rgba(162, 75, 69, 0.13);
+    border: 1px solid var(--color-accent-wine);
+    border-radius: var(--radius);
+    font-family: var(--body);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-onsurface);
+}
+
+.notice code {
+    background: rgba(0,0,0,0.25);
+    padding: 0.1rem 0.35rem;
+    border-radius: 2px;
+    color: var(--color-accent-gold-bright);
+    font-family: var(--mono);
+    font-size: 0.85em;
+}
+
+/* =========================================================
+   COLOR SPLASH — a one-shot burst that fires from wherever the
+   "Wanna listen to some music?" line was clicked, whether music is
+   starting OR stopping. Two colored orbs race in from the left and
+   right edges of the screen at equal speed, mixing their colors
+   together (mix-blend-mode: screen) as they meet dead center, then
+   burst into a white flash and settle into a clean cream/brown blend
+   at the collision point — then, a beat later, that same blend blooms
+   into a spinning rainbow (the tag's own trick) that washes over the
+   whole screen. A big "LETS GROOVE!!!" pops into the center as the
+   color settles, set in the same hand-lettered font used on the paper
+   tags. The whole sequence runs in 2.6 seconds flat.
+   Both orbs converge on the screen's actual center (not the click
+   point) so their travel distance — and how dramatic the sweep looks
+   — is always identical regardless of where on the page you clicked.
+   Purely decorative: fixed, full-screen, pointer-events: none so it
+   never blocks a click, and skipped for reduced-motion.
+   ========================================================= */
+@property --splash-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+
+.color-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.color-splash__orb {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18vmax;
+    height: 18vmax;
+    margin: -9vmax 0 0 -9vmax;
+    border-radius: 50%;
+    opacity: 0;
+    mix-blend-mode: screen;
+    isolation: isolate;
+}
+
+/* the tag's blurred-halo trick, reused here: a soft glow sitting behind
+   the orb, colored per side — lighter tint on the left, darker on the
+   right — instead of the tag's rotating rainbow (the orbs already carry
+   their own two-tone gradient, so the halo just needs to echo that). */
+.color-splash__orb::after {
+    content: "";
+    position: absolute;
+    inset: -6vmax;
+    z-index: -1;
+    border-radius: 50%;
+    background: var(--glow-color);
+    filter: blur(3vmax);
+    opacity: 0.9;
+}
+
+.color-splash__orb--left {
+    /* creamy, echoing --color-paper / --color-accent-gold */
+    --glow-color: oklch(0.93 0.045 85);
+    background:
+            radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 40%),
+            radial-gradient(circle at 78% 82%, rgba(0, 0, 0, 0.14), transparent 55%),
+            linear-gradient(135deg, oklch(0.95 0.03 88), oklch(0.8 0.09 75));
+    transform: translateX(-130vw) scale(0.65);
+}
+
+.color-splash__orb--right {
+    /* soft brown, echoing --color-accent-umber / --color-surface-deep */
+    --glow-color: oklch(0.5 0.07 50);
+    background:
+            radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 40%),
+            radial-gradient(circle at 78% 82%, rgba(0, 0, 0, 0.28), transparent 55%),
+            linear-gradient(135deg, oklch(0.64 0.09 55), oklch(0.4 0.06 40));
+    transform: translateX(130vw) scale(0.65);
+}
+
+.color-splash.is-active .color-splash__orb--left {
+    animation: orb-in-left 2.6s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+}
+
+.color-splash.is-active .color-splash__orb--right {
+    animation: orb-in-right 2.6s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+}
+
+@keyframes orb-in-left {
+    0%   { transform: translateX(-130vw) scale(0.65); opacity: 1; }
+    30%  { transform: translateX(0) scale(1.3);        opacity: 1; }
+    38%  { transform: translateX(0) scale(0.4);        opacity: 0; }
+    100% { transform: translateX(0) scale(0.4);        opacity: 0; }
+}
+
+@keyframes orb-in-right {
+    0%   { transform: translateX(130vw) scale(0.65); opacity: 1; }
+    30%  { transform: translateX(0) scale(1.3);       opacity: 1; }
+    38%  { transform: translateX(0) scale(0.4);       opacity: 0; }
+    100% { transform: translateX(0) scale(0.4);       opacity: 0; }
+}
+
+.color-splash__impact {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 6vmax;
+    height: 6vmax;
+    margin: -3vmax 0 0 -3vmax;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.95), transparent 70%);
+    opacity: 0;
+    transform: scale(0);
+}
+
+.color-splash.is-active .color-splash__impact {
+    animation: impact-pop 2.6s ease-out forwards;
+}
+
+@keyframes impact-pop {
+    0%, 27% { opacity: 0; transform: scale(0); }
+    32%     { opacity: 1; transform: scale(1); }
+    45%     { opacity: 0; transform: scale(2.8); }
+    100%    { opacity: 0; transform: scale(2.8); }
+}
+
+.color-splash__fill {
+    position: absolute;
+    inset: 0;
+    /* the clean two-tone blend at the moment of collision — creamy
+       meeting soft brown, held as a static split (shorter hue, no
+       spin) so it reads clearly before the rainbow layer takes over */
+    background: conic-gradient(from 90deg in oklch shorter hue, oklch(0.93 0.045 85), oklch(0.5 0.07 50), oklch(0.93 0.045 85));
+    clip-path: circle(0% at 50% 50%);
+}
+
+.color-splash.is-active .color-splash__fill {
+    animation: fill-expand 2.6s cubic-bezier(0.16, 0.84, 0.24, 1) forwards;
+}
+
+/* a second layer, stacked directly on top of the fill: invisible at
+   first, so the cream/brown blend above gets its moment, then fades
+   in partway through and spins using the tag's exact rainbow recipe —
+   a single color repeated as both gradient stops with "longer hue",
+   which is what forces a full, even 360° sweep (using two *different*
+   colors here instead gave only a partial, lopsided arc). */
+.color-splash__rainbow {
+    position: absolute;
+    inset: 0;
+    background: conic-gradient(from var(--splash-angle) in oklch longer hue, oklch(0.78 0.19 30), oklch(0.78 0.19 30));
+    clip-path: circle(0% at 50% 50%);
+    opacity: 0;
+}
+
+.color-splash.is-active .color-splash__rainbow {
+    animation:
+            fill-expand 2.6s cubic-bezier(0.16, 0.84, 0.24, 1) forwards,
+            splash-spin 2.6s linear forwards,
+            rainbow-reveal 2.6s ease-in forwards;
+}
+
+@keyframes splash-spin {
+    0%   { --splash-angle: 0deg; }
+    100% { --splash-angle: 360deg; }
+}
+
+@keyframes rainbow-reveal {
+    0%, 50% { opacity: 0; }
+    62%     { opacity: 1; }
+    100%    { opacity: 1; }
+}
+
+@keyframes fill-expand {
+    0%, 29% { clip-path: circle(0% at 50% 50%); }
+    38%     { clip-path: circle(85% at 50% 50%); }
+    50%     { clip-path: circle(145% at 50% 50%); }
+    100%    { clip-path: circle(145% at 50% 50%); }
+}
+
+.color-splash__text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin: 0;
+    transform: translate(-50%, -50%) scale(0.5) rotate(-6deg);
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: clamp(2.6rem, 10vw, 6.5rem);
+    letter-spacing: 0.01em;
+    color: #fff;
+    text-shadow: 0 4px 26px rgba(0, 0, 0, 0.35), 0 0 42px rgba(255, 255, 255, 0.65);
+    white-space: nowrap;
+    opacity: 0;
+    z-index: 1;
+}
+
+.color-splash.is-active .color-splash__text {
+    animation: splash-text-pop 2.6s cubic-bezier(0.22, 0.85, 0.28, 1) forwards;
+}
+
+@keyframes splash-text-pop {
+    0%, 38% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(-8deg); }
+    50%     { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(3deg); }
+    58%     { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+    88%     { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+    100%    { opacity: 0; transform: translate(-50%, -50%) scale(1.08) rotate(0deg); }
+}
+
+.color-splash.is-active {
+    animation: splash-opacity 2.6s ease-in-out forwards;
+}
+
+@keyframes splash-opacity {
+    0%   { opacity: 0; }
+    3%   { opacity: 1; }
+    92%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .color-splash.is-active,
+    .color-splash.is-active .color-splash__orb--left,
+    .color-splash.is-active .color-splash__orb--right,
+    .color-splash.is-active .color-splash__impact,
+    .color-splash.is-active .color-splash__fill,
+    .color-splash.is-active .color-splash__rainbow,
+    .color-splash.is-active .color-splash__text {
+        animation: none !important;
+        opacity: 0 !important;
+    }
+}
+
+/* =========================================================
+   LIGHTBOX — full image view on card click
+   ========================================================= */
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4vh 4vw;
+    background: rgba(31, 22, 14, 0.92);
+    backdrop-filter: blur(6px);
+    animation: lightbox-fade 0.2s var(--ease);
+    cursor: zoom-out;
+}
+
+.lightbox[hidden] { display: none; }
+
+@keyframes lightbox-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.lightbox__figure {
+    margin: 0;
+    max-width: min(90vw, 900px);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    cursor: default;
+    animation: lightbox-pop 0.28s var(--ease);
+}
+
+/* wraps just the photo (not the caption) so the prev/next buttons below
+   can anchor to the image's own edges instead of the full viewport —
+   keeps them hugging the photo at any screen size instead of sitting
+   out at the extreme left/right of the browser window */
+.lightbox__media {
+    position: relative;
+    max-width: 100%;
+}
+
+@keyframes lightbox-pop {
+    0%   { opacity: 0; transform: scale(0.9) rotate(-3deg) translateY(10px); }
+    60%  { opacity: 1; transform: scale(1.03) rotate(1.2deg) translateY(-2px); }
+    100% { opacity: 1; transform: scale(1) rotate(0deg) translateY(0); }
+}
+
+@keyframes lightbox-pop-rave {
+    0%   { opacity: 0; transform: scale(0.8) rotate(-10deg) translateY(16px); }
+    50%  { opacity: 1; transform: scale(1.08) rotate(6deg) translateY(-6px); }
+    75%  { transform: scale(0.97) rotate(-2deg) translateY(2px); }
+    100% { opacity: 1; transform: scale(1) rotate(0deg) translateY(0); }
+}
+
+body.music-playing:not(.rave-hold) .lightbox__figure {
+    animation-name: lightbox-pop-rave;
+    animation-duration: 0.45s;
+}
+
+/* the cream paper "mat" the photo sits in — kept as its own element so its
+   padding doesn't push the photo's corners past the reach of a rounded edge */
+.lightbox__mat {
+    --mat-pad: 1.25rem;
+    display: inline-flex;
+    max-width: 100%;
+    background: var(--color-paper);
+    border-radius: var(--radius);
+    padding: var(--mat-pad);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--accent, var(--color-accent-gold));
+}
+
+.lightbox__img {
+    display: block;
+    max-width: 100%;
+    /* subtract the mat's own padding so the whole mat still tops out
+       around 78vh, matching the original single-element sizing */
+    max-height: calc(78vh - (var(--mat-pad) * 2));
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 6px; /* same rounding as the .specimen__frame thumbnails */
+}
+
+/* caption is split into a title line and a smaller meta line (credit,
+   date) rather than one flat sentence, so the bird/entry name reads as
+   the headline and the "who/when" detail sits underneath it, quieter */
+.lightbox__caption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    max-width: min(90vw, 560px);
+}
+
+.lightbox__caption-title {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 1.3rem;
+    line-height: 1.3;
+    color: var(--color-paper);
+    text-align: center;
+}
+
+.lightbox__caption-meta {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-oninverse-dim);
+}
+
+/* short dash on either side of the meta line — same dotted-leader,
+   hand-laid-out feel as the tag and fact-tile labels elsewhere */
+.lightbox__caption-meta::before,
+.lightbox__caption-meta::after {
+    content: "";
+    width: 1rem;
+    height: 1px;
+    background: var(--text-oninverse-dim);
+    opacity: 0.55;
+}
+
+.lightbox__caption-meta[hidden] {
+    display: none;
+}
+
+.lightbox__close {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.75rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    border: 2px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-paper);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.2s var(--ease);
+}
+
+.lightbox__close:hover {
+    background: var(--color-accent-gold);
+    border-color: var(--color-accent-gold);
+    color: var(--color-surface-deep);
+    transform: scale(1.06) rotate(90deg);
+}
+
+/* prev/next: same plated-button look as close. Anchored to
+   .lightbox__media (the photo's positioned parent) and pushed out
+   past its edge, so they float in the dark backdrop just outside the
+   frame — close to the photo, but not overlapping it. On small
+   screens (below) they switch to pinning at the screen edges instead,
+   since there isn't room to float them outside the frame there. */
+.lightbox__nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    border: 2px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-paper);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.2s var(--ease);
+}
+
+.lightbox__nav[hidden] { display: none; }
+
+.lightbox__nav--prev { left: -5.25rem; }
+.lightbox__nav--next { right: -5.25rem; }
+
+.lightbox__nav:hover {
+    background: var(--color-accent-gold);
+    border-color: var(--color-accent-gold);
+    color: var(--color-surface-deep);
+    transform: translateY(-50%) scale(1.08);
+}
+
+@media (max-width: 640px) {
+    /* not enough room beside the photo on small screens to float the
+       buttons outside its frame without running off the viewport — pin
+       them to the screen edges instead (the photo already fills most
+       of the width here, so they still end up right next to it) */
+    .lightbox__nav {
+        position: fixed;
+        top: 50%;
+    }
+    .lightbox__nav--prev { left: 0.5rem; }
+    .lightbox__nav--next { right: 0.5rem; }
+}
+
+/* =========================================================
+   CONTACT
+   ========================================================= */
+.contact {
+    border-top: 1px solid var(--color-border);
+    padding: 2.5rem 6vw;
+    text-align: center;
+    background: var(--color-surface-deep);
+}
+
+.contact__heading {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    color: var(--color-paper);
+    margin: 0 auto 2rem;
+}
+
+.contact__buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.contact__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--body);
+    font-size: 0.92rem;
+    font-weight: 500;
+    text-decoration: none;
+    color: var(--color-surface-deep);
+    background: var(--color-paper);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease);
+}
+
+.contact__btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    background: var(--color-accent-umber);
+    color: var(--color-paper);
+}
+
+/* =========================================================
+   NO BIRDS SPOTTED — games explored that had no birds to log.
+   Compact tag-cloud of chips instead of a one-per-row list, so a
+   long list stays a few short wrapped lines rather than a scroll.
+   ========================================================= */
+.no-birds {
+    border-top: 1px dashed var(--color-border);
+    background: var(--color-surface);
+    padding: 3.25rem 6vw;
+}
+
+.no-birds__inner {
+    max-width: 720px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.no-birds__heading {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: clamp(1.3rem, 2.4vw, 1.7rem);
+    color: var(--text-primary);
+    margin: 0 0 0.85rem;
+}
+
+.no-birds__sub {
+    font-family: var(--body);
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    max-width: 34rem;
+    margin: 0 auto 2.25rem;
+}
+
+.no-birds__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.65rem;
+}
+
+.no-birds__chip {
+    font-family: var(--body);
+    font-size: 0.82rem;
+    color: var(--text-onsurface);
+    background: var(--color-paper-2);
+    border: 1px dashed var(--color-border);
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem;
+    line-height: 1.2;
+    cursor: default;
+    transition: background 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.2s var(--ease);
+}
+
+.no-birds__chip:hover {
+    background: var(--color-surface-2);
+    border-color: var(--color-accent-gold);
+    transform: translateY(-1px);
+}
+
+/* rave mode: a thin hue-cycling border, using the same --accent sweep
+   as the bird cards and scrapbook cards, so the chips join in too. */
+body.music-playing:not(.rave-hold) .no-birds__chip {
+    animation: rave-accent 3.5s linear infinite;
+    border-style: solid;
+    border-width: 2px;
+    border-color: var(--accent);
+}
+
+/* =========================================================
+   BACK TO TOP — thin strip closing out the collection
+   ========================================================= */
+.back-to-top-banner {
+    display: block;
+    text-align: center;
+    padding: 0.85rem 1rem;
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.01em;
+    color: var(--color-accent-wine);
+    background: var(--color-surface-2);
+    border-top: 1px dashed var(--color-border);
+    border-bottom: 1px dashed var(--color-border);
+    text-decoration: none;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.back-to-top-banner:hover,
+.back-to-top-banner:focus-visible {
+    background: var(--color-accent-gold);
+    color: var(--color-paper);
+}
+
+/* =========================================================
+   RAVE MODE — the .tag rainbow ring, reused on a handful of other
+   clickable/accent elements when the music is playing. Deliberately
+   NOT applied to backgrounds, body copy, headings or the game list —
+   those stay put so the page is still easy to read and use, and the
+   rainbow reads as a fun accent rather than a full page takeover.
+   ========================================================= */
+
+/* --- specimen cards: their existing per-card accent (gold / wine /
+   umber, driven by --accent) sweeps through the spectrum instead.
+   Everything already keyed off --accent — border, pin, id label —
+   moves together for free. animation-* is written in longhand here
+   so this rule can ADD a second animation without clobbering the
+   card's own entrance animation declared above. */
+@property --accent {
+    syntax: '<color>';
+    inherits: false;
+    initial-value: #C6862F;
+}
+
+.specimen {
+    animation-name: rise;
+    animation-duration: 0.6s;
+    animation-timing-function: var(--ease);
+    animation-fill-mode: forwards;
+    animation-delay: var(--delay, 0ms);
+}
+
+@keyframes rave-accent {
+    0%   { --accent: oklch(0.72 0.19 20); }
+    16%  { --accent: oklch(0.78 0.19 80); }
+    33%  { --accent: oklch(0.75 0.18 140); }
+    50%  { --accent: oklch(0.72 0.16 200); }
+    66%  { --accent: oklch(0.70 0.20 260); }
+    83%  { --accent: oklch(0.72 0.20 320); }
+    100% { --accent: oklch(0.72 0.19 20); }
+}
+
+@property --wiggle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+
+@keyframes card-wiggle {
+    0%, 100% { --wiggle: 0deg; }
+    25%      { --wiggle: 4deg; }
+    75%      { --wiggle: -4deg; }
+}
+
+body.music-playing:not(.rave-hold) .specimen {
+    animation-name: rise, rave-accent, card-wiggle;
+    animation-duration: 0.6s, 3.5s, 1.8s;
+    animation-timing-function: var(--ease), linear, ease-in-out;
+    animation-fill-mode: forwards, none, none;
+    animation-delay: var(--delay, 0ms), var(--delay, 0ms), var(--delay, 0ms);
+    animation-iteration-count: 1, infinite, infinite;
+}
+
+/* --- rave-mode glowing border: the same hue-cycling --accent used by the
+   specimen cards, applied as a pulsing halo of box-shadow rings around the
+   hero collage and the About Me photo, so both feel lit up while the
+   music plays rather than sitting static next to everything else. */
+body.music-playing:not(.rave-hold) .hero__visual {
+    animation: rave-accent 3.5s linear infinite;
+    box-shadow:
+            0 0 0 3px var(--accent),
+            0 0 26px 6px var(--accent),
+            0 0 52px 16px color-mix(in oklch, var(--accent) 55%, transparent);
+}
+
+body.music-playing:not(.rave-hold) .scrap {
+    animation: rave-accent 3.5s linear infinite;
+    box-shadow:
+            0 12px 26px rgba(64, 48, 31, 0.18),
+            0 0 0 2px var(--accent),
+            0 0 14px 3px var(--accent),
+            0 0 26px 8px color-mix(in oklch, var(--accent) 45%, transparent);
+}
+
+/* --- buttons & controls: the same halo + crisp-ring pair from .tag,
+   sized to fit each shape (pill / circle / strip / nav row).
+   .lightbox__close and .lightbox__nav already carry their own
+   position: absolute (pinned to the lightbox corners/sides) — only
+   isolation is added here for those two, so this halo rule doesn't
+   knock them back into normal document flow. */
+.contact__btn,
+.back-to-top-banner,
+.game-item.active .game-btn {
+    position: relative;
+    isolation: isolate;
+}
+
+.lightbox__close,
+.lightbox__nav {
+    isolation: isolate;
+}
+
+.contact__btn::before, .contact__btn::after,
+.lightbox__close::before, .lightbox__close::after,
+.lightbox__nav::before, .lightbox__nav::after,
+.back-to-top-banner::before, .back-to-top-banner::after,
+.game-item.active .game-btn::before, .game-item.active .game-btn::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+    background: conic-gradient(from var(--tag-angle) in oklch longer hue, var(--glow-color, oklch(0.78 0.19 30)), var(--glow-color, oklch(0.78 0.19 30)));
+    animation: rainbow-angle 3s linear infinite;
+    animation-play-state: paused;
+    transition: opacity 0.35s var(--ease);
+}
+
+.contact__btn::before,
+.lightbox__close::before,
+.lightbox__nav::before,
+.back-to-top-banner::before,
+.game-item.active .game-btn::before {
+    z-index: -2;
+    filter: blur(10px);
+}
+
+.contact__btn::after,
+.lightbox__close::after,
+.lightbox__nav::after,
+.back-to-top-banner::after,
+.game-item.active .game-btn::after {
+    z-index: -1;
+    padding: 2px;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
+.contact__btn::before  { inset: -6px; border-radius: calc(var(--radius) + 6px); }
+.contact__btn::after   { inset: -1px; border-radius: calc(var(--radius) + 1px); }
+
+.lightbox__close::before, .lightbox__nav::before { inset: -6px; border-radius: 50%; }
+.lightbox__close::after,  .lightbox__nav::after  { inset: -1px; border-radius: 50%; }
+
+.back-to-top-banner::before   { inset: -5px; border-radius: 10px; }
+.back-to-top-banner::after    { inset: -1px; border-radius: 5px; }
+
+.game-item.active .game-btn::before { inset: -4px; border-radius: 10px; }
+.game-item.active .game-btn::after  { inset: -1px; border-radius: 5px; }
+
+body.music-playing:not(.rave-hold) .contact__btn::before, body.music-playing:not(.rave-hold) .contact__btn::after,
+body.music-playing:not(.rave-hold) .lightbox__close::before, body.music-playing:not(.rave-hold) .lightbox__close::after,
+body.music-playing:not(.rave-hold) .lightbox__nav::before, body.music-playing:not(.rave-hold) .lightbox__nav::after,
+body.music-playing:not(.rave-hold) .back-to-top-banner::before, body.music-playing:not(.rave-hold) .back-to-top-banner::after,
+body.music-playing:not(.rave-hold) .game-item.active .game-btn::before,
+body.music-playing:not(.rave-hold) .game-item.active .game-btn::after {
+    opacity: 1;
+    animation-duration: 1.4s;
+    animation-play-state: running;
+}
+
+body.music-playing:not(.rave-hold) .contact__btn,
+body.music-playing:not(.rave-hold) .back-to-top-banner,
+body.music-playing:not(.rave-hold) .game-item.active .game-btn,
+body.music-playing:not(.rave-hold) .game-item.active .game-btn__index,
+body.music-playing:not(.rave-hold) .game-item.active .game-btn__count {
+    color: #fff;
+}
+
+/* --- logbook tabs: same halo + crisp-ring pair as the buttons above.
+   The tab's ::after is normally the gold underline bar — in rave mode
+   it drops the underline treatment entirely and becomes the crisp
+   ring instead (mask trick, same as .contact__btn::after), sized to
+   wrap the label like a little pill, while ::before sits behind it as
+   the blurred glow. */
+.logbook__tab.is-active {
+    position: relative;
+    isolation: isolate;
+}
+
+.logbook__tab.is-active::before {
+    content: "";
+    position: absolute;
+    inset: -5px -8px;
+    z-index: -2;
+    border-radius: 8px;
+    pointer-events: none;
+    opacity: 0;
+    background: conic-gradient(from var(--tag-angle) in oklch longer hue, var(--glow-color, oklch(0.78 0.19 30)), var(--glow-color, oklch(0.78 0.19 30)));
+    filter: blur(8px);
+    animation: rainbow-angle 3s linear infinite;
+    animation-play-state: paused;
+    transition: opacity 0.35s var(--ease);
+}
+
+/* the button's own padding is 0 top / 0.8rem bottom — space normally
+   reserved for the underline bar sitting under the text. The ring
+   wraps the button's actual box, so with the old padding left in
+   place the text would sit visibly above-center inside it; squaring
+   the padding up here keeps the label centered in the pill. */
+body.music-playing:not(.rave-hold) .logbook__tab.is-active {
+    padding: 0.35rem 0.1rem;
+    color: #fff;
+}
+
+body.music-playing:not(.rave-hold) .logbook__tab.is-active::before {
+    opacity: 1;
+    animation-duration: 1.4s;
+    animation-play-state: running;
+}
+
+body.music-playing:not(.rave-hold) .logbook__tab.is-active::after {
+    content: "";
+    top: -5px;
+    right: -8px;
+    bottom: -5px;
+    left: -8px;
+    height: auto;
+    z-index: -1;
+    border-radius: 8px;
+    padding: 2px;
+    transform: none;
+    background: conic-gradient(from var(--tag-angle) in oklch longer hue, var(--glow-color, oklch(0.78 0.19 30)), var(--glow-color, oklch(0.78 0.19 30)));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: rainbow-angle 1.4s linear infinite;
+}
+
+/* --- headline text: no box, no background, no color effects. */
+.hero__title,
+.board__title {
+    text-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.music-playing:not(.rave-hold) .specimen,
+    body.music-playing:not(.rave-hold) .hero__visual,
+    body.music-playing:not(.rave-hold) .scrap,
+    body.music-playing:not(.rave-hold) .no-birds__chip,
+    body.music-playing:not(.rave-hold) .logbook__tab.is-active,
+    body.music-playing:not(.rave-hold) .contact__btn::before, body.music-playing:not(.rave-hold) .contact__btn::after,
+    body.music-playing:not(.rave-hold) .lightbox__close::before, body.music-playing:not(.rave-hold) .lightbox__close::after,
+    body.music-playing:not(.rave-hold) .lightbox__nav::before, body.music-playing:not(.rave-hold) .lightbox__nav::after,
+    body.music-playing:not(.rave-hold) .back-to-top-banner::before, body.music-playing:not(.rave-hold) .back-to-top-banner::after,
+    body.music-playing:not(.rave-hold) .game-item.active .game-btn::before,
+    body.music-playing:not(.rave-hold) .game-item.active .game-btn::after {
+        animation: none;
+    }
+}
+
+/* --- scrollbars: every scrollbar on the page (the page itself, the
+   sidebar, the game list) turns into a flowing rainbow strip while the
+   music plays. The page's own scrollbar belongs to <html>, not <body>
+   (html has an explicit overflow-x set, so it owns the viewport
+   scrollbar) — the html.music-playing selectors are what make that one
+   glow; the body.music-playing ones are kept too in case that ever
+   changes. Firefox's `scrollbar-color` only takes flat colors — no
+   gradients, no animation — so it gets a single vivid fallback hue
+   instead of the flowing effect. That fallback is scoped to browsers
+   without ::-webkit-scrollbar support (Firefox) — otherwise Chromium's
+   native scrollbar-color support would flatten the animated gradient
+   below down to this one plain color, same as the base scrollbar above. */
+@supports not selector(::-webkit-scrollbar) {
+    html.music-playing:not(.rave-hold),
+    body.music-playing:not(.rave-hold),
+    body.music-playing:not(.rave-hold) .sidebar__sticky,
+    body.music-playing:not(.rave-hold) .game-list {
+        scrollbar-color: oklch(0.72 0.2 320) var(--color-surface-2);
+    }
+}
+
+html.music-playing:not(.rave-hold)::-webkit-scrollbar-thumb,
+body.music-playing:not(.rave-hold)::-webkit-scrollbar-thumb,
+body.music-playing:not(.rave-hold) .sidebar__sticky::-webkit-scrollbar-thumb,
+body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb {
+    background-image: repeating-linear-gradient(
+            45deg,
+            oklch(0.75 0.16 350) 0,
+            oklch(0.75 0.16 30)  20px,
+            oklch(0.75 0.16 85)  40px,
+            oklch(0.75 0.16 160) 60px,
+            oklch(0.75 0.16 230) 80px,
+            oklch(0.75 0.16 300) 100px,
+            oklch(0.75 0.16 350) 120px
+    );
+    background-color: transparent;
+    animation: scrollbar-flow 5s linear infinite;
+}
+
+html.music-playing:not(.rave-hold)::-webkit-scrollbar-thumb:hover,
+body.music-playing:not(.rave-hold)::-webkit-scrollbar-thumb:hover,
+body.music-playing:not(.rave-hold) .sidebar__sticky::-webkit-scrollbar-thumb:hover,
+body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
+    background-color: transparent;
+}
+
+@keyframes scrollbar-flow {
+    to { background-position: 170px 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html.music-playing:not(.rave-hold)::-webkit-scrollbar-thumb,
+    body.music-playing:not(.rave-hold)::-webkit-scrollbar-thumb,
+    body.music-playing:not(.rave-hold) .sidebar__sticky::-webkit-scrollbar-thumb,
+    body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb {
+        animation: none;
+    }
+}
+
+/* =========================================================
+   TACTILE FEEDBACK — a quick, satisfying press on everything
+   clickable. Placed after each element's own rules so it wins
+   over :hover at equal specificity when both match during a click.
+   ========================================================= */
+.specimen:active {
+    transform: scale(0.97) translateY(-2px);
+}
+
+.game-btn:active {
+    transform: scale(0.985);
+}
+
+.tag--cta:active,
+.contact__btn:active,
+.lightbox__close:active,
+.lightbox__nav:active,
+.back-to-top-banner:active,
+.music-line:active,
+.hero__scroll:active {
+    transform: scale(0.94);
+}
+
+.lightbox__nav:active {
+    /* keep the existing vertical centering instead of losing it to the shared rule above */
+    transform: translateY(-50%) scale(0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .specimen:active,
+    .game-btn:active,
+    .tag--cta:active,
+    .contact__btn:active,
+    .lightbox__close:active,
+    .lightbox__nav:active,
+    .back-to-top-banner:active,
+    .music-line:active,
+    .hero__scroll:active {
+        transform: none;
+    }
+}
+.site-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 1rem 6vw 1rem;
+    text-align: center;
+    background: var(--color-surface-deep);
+    border-top: 1px solid var(--color-border);
+}
+
+.site-footer__line {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 1.05rem;
+    color: var(--color-paper);
+}
+
+.site-footer__meta {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: var(--text-oninverse-dim);
+}
+
+/* the "Solune" credit doubles as the About Me toggle — stays plain at
+   rest so it still reads as a name rather than a button, but a soft
+   dotted underline + cursor + color lift on hover/focus give a quiet
+   nudge that it's clickable, without spelling out what's behind it */
+.footer-credit-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-decoration-color: transparent;
+    text-underline-offset: 3px;
+    transition: color 0.2s var(--ease), text-decoration-color 0.2s var(--ease);
+}
+
+.footer-credit-btn:hover,
+.footer-credit-btn:focus-visible {
+    color: var(--color-accent-gold-bright);
+    text-decoration-color: var(--color-accent-gold-bright);
+}
+
+
+/* =========================================================
+   ABOUT ME — a scrapbook page tucked below the footer:
+   torn-paper cards, washi tape, and a couple of doodled
+   stickers, each card sitting at its own gentle tilt like it
+   was laid down by hand rather than snapped to a grid.
+   ========================================================= */
+.about-me {
+    border-top: 1px dashed var(--color-border);
+    background: var(--color-surface);
+    padding: 5rem 6vw 6rem;
+    min-height: 100vh;
+    /* dvh accounts for mobile browser chrome, same reasoning as .hero */
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    /* closed/default state: invisible and settled slightly lower. The
+       actual open/close animation is handled natively via the `hidden`
+       attribute + @starting-style below, rather than a JS-timed class —
+       the browser keeps `display: flex` for the full transition on
+       both ends instead of us having to guess the CSS duration in JS. */
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.4s var(--ease), transform 0.4s var(--ease), display 0.4s allow-discrete;
+    /* hints the browser to composite this on its own layer so the
+       fade/rise doesn't repaint the (fairly busy) card content and
+       background texture on every frame */
+    will-change: opacity, transform;
+}
+
+.about-me:not([hidden]) {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* the state to transition *from* the instant `hidden` is removed —
+   without this, removing `hidden` would just snap straight to the
+   open state above with no animation at all */
+@starting-style {
+    .about-me:not([hidden]) {
+        opacity: 0;
+        transform: translateY(28px);
+    }
+}
+
+/* still needed for browsers without @starting-style/allow-discrete
+   support: at least jumps straight to fully hidden rather than
+   leaving an invisible-but-interactive block sitting in the layout */
+.about-me[hidden] {
+    display: none;
+}
+
+/* a scattering of faint accent dots behind the whole page, standing
+   in for a corkboard's texture without needing an image asset */
+.about-me::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+            radial-gradient(var(--color-accent-gold) 1.5px, transparent 1.5px),
+            radial-gradient(var(--color-accent-wine) 1.5px, transparent 1.5px);
+    background-size: 90px 90px, 130px 130px;
+    background-position: 0 0, 45px 65px;
+    opacity: 0.08;
+    pointer-events: none;
+}
+
+.about-me__board {
+    position: relative;
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+}
+
+/* re-centers the "secret page" tag above the scrapbook rather than
+   inline with a text column, and gives it its own little tilt */
+.about-me__board > .about-me__tag {
+    display: flex;
+    justify-content: center;
+    margin: 0 auto 2.5rem;
+    transform: rotate(-1.5deg);
+    width: fit-content;
+}
+
+.about-me__tag {
+    animation-name: tag-in;
+    animation-duration: 0.5s;
+    animation-timing-function: var(--ease);
+    animation-delay: 0.1s;
+    animation-iteration-count: 1;
+    animation-fill-mode: forwards;
+    font-size: 1.3rem;
+    padding: 0.55rem 1.3rem 0.55rem 0.95rem;
+}
+
+/* doodled stickers, scattered around the board behind the cards —
+   pure decoration, kept out of the tab order and off to the side so
+   they never sit on top of anything readable */
+.about-me__sticker {
+    position: absolute;
+    z-index: 0;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+}
+
+.about-me__sticker--star {
+    top: -6px;
+    left: 1%;
+    font-size: 2.1rem;
+    color: var(--color-accent-gold);
+    opacity: 0.65;
+    transform: rotate(-14deg);
+}
+
+.about-me__sticker--bird {
+    top: 46%;
+    right: -1%;
+    font-size: 2.5rem;
+    color: var(--color-accent-wine);
+    opacity: 0.5;
+    transform: rotate(10deg) scaleX(-1);
+}
+
+.about-me__sticker--heart {
+    bottom: 2%;
+    left: 42%;
+    font-size: 1.5rem;
+    color: var(--color-accent-wine-bright);
+    opacity: 0.55;
+    transform: rotate(12deg);
+}
+
+.about-me__grid {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2.5rem 4.5rem;
+}
+
+/* one unbroken row only on genuinely large screens — the photo card
+   is now a fixed size, so narrower widths wrap instead of squeezing
+   the note/facts cards down to nothing */
+@media (min-width: 1180px) {
+    .about-me__grid {
+        flex-wrap: nowrap;
+    }
+}
+
+/* the shared "piece of paper" look every card in the scrapbook uses:
+   a hand-cut-looking blob radius, a bit of lift, and a gentle
+   straighten-and-rise on hover so the page still feels touchable */
+.scrap {
+    position: relative;
+    background: var(--color-paper);
+    padding: 1.4rem;
+    border-radius: 3px 16px 5px 18px / 16px 4px 18px 5px;
+    box-shadow: 0 12px 26px rgba(64, 48, 31, 0.18), 0 0 0 1px var(--color-border-soft);
+    margin: 0;
+    transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
+}
+
+.scrap:hover {
+    transform: rotate(0deg) translateY(-5px) !important;
+    box-shadow: 0 18px 34px rgba(64, 48, 31, 0.24), 0 0 0 1px var(--color-accent-gold);
+    z-index: 3;
+}
+
+.scrap--photo {
+    flex: 0 0 380px;
+    transform: rotate(-4deg);
+    /* rotating an element can push browsers onto a blurry subpixel-
+       antialiased rendering path; forcing its own compositor layer
+       keeps the photo crisp */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.scrap--note {
+    flex: 1 1 420px;
+    max-width: 480px;
+    margin-top: -0.75rem;
+    transform: rotate(1.25deg);
+    z-index: 2;
+}
+
+.scrap--facts {
+    flex: 0 1 270px;
+    margin-top: 1.5rem;
+    transform: rotate(2.5deg);
+}
+
+.washi-tape {
+    position: absolute;
+    width: 68px;
+    height: 24px;
+    background: repeating-linear-gradient(
+            45deg,
+            color-mix(in oklch, var(--color-accent-gold-bright) 55%, white) 0 8px,
+            color-mix(in oklch, var(--color-accent-gold) 45%, white) 8px 16px
+    );
+    opacity: 0.88;
+    box-shadow: 0 2px 5px rgba(64, 48, 31, 0.2);
+    pointer-events: none;
+}
+
+.washi-tape--top {
+    top: -13px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-4deg);
+}
+
+.washi-tape--corner {
+    top: -11px;
+    right: 18px;
+    transform: rotate(9deg);
+}
+
+.washi-tape--wine {
+    background: repeating-linear-gradient(
+            45deg,
+            color-mix(in oklch, var(--color-accent-wine-bright) 55%, white) 0 8px,
+            color-mix(in oklch, var(--color-accent-wine) 45%, white) 8px 16px
+    );
+}
+
+.scrap--photo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+}
+
+.scrap__img {
+    width: 100%;
+    max-width: 340px;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.about-me__caption {
+    margin: 0.9rem 0 0;
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--color-accent-wine);
+    text-align: center;
+    max-width: 15rem;
+    transform: rotate(-1deg);
+}
+
+.about-me__title {
+    position: relative;
+    display: inline-block;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: clamp(1.7rem, 3vw, 2.2rem);
+    color: var(--text-primary);
+    margin: 0 0 1.2rem;
+    transform: rotate(-1deg);
+}
+
+/* a loose, hand-drawn underline swipe instead of a plain rule */
+.about-me__title::after {
+    content: "";
+    position: absolute;
+    left: -0.15em;
+    right: -0.15em;
+    bottom: -0.15em;
+    height: 0.5em;
+    background: var(--color-accent-gold);
+    opacity: 0.35;
+    border-radius: 3px 8px 5px 9px / 8px 3px 9px 4px;
+    z-index: -1;
+    transform: rotate(-1.2deg);
+}
+
+.about-me__text {
+    font-family: var(--body);
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text-onsurface);
+    margin: 0 0 1rem;
+}
+
+.about-me__text:last-of-type {
+    margin-bottom: 0;
+}
+
+/* the fun-facts card: its own small stack of tilted tiles, rather than
+   reusing the hero's dotted-leader ledger — that read as a re-skin of
+   the stats block instead of a scrapbook card of its own. */
+.fact-card__title {
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--color-accent-wine);
+    text-align: center;
+    margin: 0 0 1.1rem;
+}
+
+.fact-card__grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.fact-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    background: var(--color-paper-2);
+    border: 1px dashed var(--color-border);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+}
+
+.fact-tile:nth-child(even) { transform: rotate(-0.7deg); }
+.fact-tile:nth-child(odd):not(:first-child) { transform: rotate(0.7deg); }
+
+.fact-tile__label {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.fact-tile__value {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 1rem;
+    line-height: 2;
+    color: var(--text-primary);
+    text-align: left;
+}
+
+/* =========================================================
+   LOGBOOK — its own section directly below About Me, sharing
+   that section's reveal mechanics (opens/closes in lockstep,
+   see initAboutMe in app.js) and, unlike About Me, built from
+   the site's own look — same dashed section border, Fraunces
+   heading and mono date labels as the rest of the page — rather
+   than the scrapbook's torn paper and washi tape.
+   ========================================================= */
+.logbook-section {
+    border-top: 1px dashed var(--color-border);
+    background: var(--color-surface);
+    padding: 3.5rem 6vw 4.5rem;
+    display: flex;
+    justify-content: center;
+    max-height: 100vh;
+    overflow-y: auto;
+    /* same native hidden-attribute-driven fade/rise as .about-me, so the
+       two sections open and close together without any JS-timed classes */
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.4s var(--ease), transform 0.4s var(--ease), display 0.4s allow-discrete;
+    will-change: opacity, transform;
+}
+
+.logbook-section:not([hidden]) {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@starting-style {
+    .logbook-section:not([hidden]) {
+        opacity: 0;
+        transform: translateY(28px);
+    }
+}
+
+.logbook-section[hidden] {
+    display: none;
+}
+
+.logbook-section__inner {
+    width: 100%;
+    max-width: 1000px;
+    text-align: center;
+}
+
+.logbook-section__heading {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: clamp(1.5rem, 2.8vw, 1.9rem);
+    color: var(--text-primary);
+    margin: 0 0 0.6rem;
+}
+
+.logbook-section__sub {
+    font-family: var(--body);
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    max-width: 32rem;
+    margin: 0 auto 2rem;
+}
+
+.logbook__tabs {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    border-bottom: 1px solid var(--color-border);
+    margin: 0 0 1.75rem;
+}
+
+.logbook__tab {
+    position: relative;
+    font-family: var(--hand);
+    font-size: 1.2rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    padding: 0 0.1rem 0.6rem;
+    cursor: pointer;
+    transition: color 0.2s var(--ease);
+}
+
+.logbook__tab::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--color-accent-gold);
+    transform: scaleX(0);
+    transition: transform 0.25s var(--ease);
+}
+
+.logbook__tab:hover {
+    color: var(--text-primary);
+}
+
+.logbook__tab.is-active {
+    color: var(--text-primary);
+}
+
+.logbook__tab.is-active::after {
+    transform: scaleX(1);
+}
+
+.logbook__panel {
+    max-height: 480px;
+    overflow-y: auto;
+    padding: 0.3rem 1.1rem 0.3rem 0.3rem;
+    text-align: left;
+}
+
+/* --- Birb Log: date heading > game heading > grid of bird cards --- */
+.logbook__date-group {
+    margin-bottom: 2.25rem;
+}
+
+.logbook__date-group:last-child {
+    margin-bottom: 0;
+}
+
+.logbook__date-heading {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-accent-gold);
+    border-bottom: 1px dashed var(--color-border);
+    padding-bottom: 0.5rem;
+    margin: 0 0 1.1rem;
+}
+
+.logbook__game-group {
+    margin-bottom: 1.5rem;
+}
+
+.logbook__game-group:last-child {
+    margin-bottom: 0;
+}
+
+.logbook__game-heading {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin: 0 0 0.75rem;
+    padding-left: 0.1rem;
+}
+
+.logbook__bird-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 1.1rem;
+}
+
+/* --- Dev Log: plain chronological entries, image only when present --- */
+.logbook__panel--dev:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.dev-entry {
+    border-left: 2px solid var(--color-accent-gold);
+    padding-left: 1rem;
+    opacity: 0;
+    animation: rise 0.6s var(--ease) forwards;
+    animation-delay: var(--delay, 0ms);
+}
+
+.dev-entry__date {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--color-accent-gold);
+    margin: 0 0 0.3rem;
+}
+
+.dev-entry__text {
+    font-family: var(--body);
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: var(--text-onsurface);
+    margin: 0;
+}
+
+.dev-entry__frame {
+    margin-top: 0.75rem;
+    max-width: 320px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(42, 35, 24, 0.14);
+    background: var(--color-paper-dim);
+    transition: box-shadow 0.25s var(--ease), transform 0.25s var(--ease);
+}
+
+.dev-entry__frame:hover,
+.dev-entry__frame:focus-visible {
+    box-shadow: 0 8px 18px rgba(64, 48, 31, 0.2);
+    transform: translateY(-2px);
+    outline: none;
+}
+
+.dev-entry__frame img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+/* =========================================================
+   LOG CARD — the same plated field-guide card as .specimen in
+   the main collection (frame, shine sweep, accent-cycling
+   border, gentle tilt), minus the pin decoration and credit
+   line, which don't apply to a changelog entry.
+   ========================================================= */
+.log-card {
+    --accent: var(--color-accent-gold);
+    background: var(--color-paper);
+    color: var(--text-primary);
+    border-radius: var(--radius);
+    padding: 0.8rem 0.8rem 1rem;
+    box-shadow: 0 10px 22px rgba(64, 48, 31, 0.16);
+    border-bottom: 3px solid var(--accent);
+    transform: rotate(var(--tilt, 0deg));
+    transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
+    opacity: 0;
+    animation: rise 0.6s var(--ease) forwards;
+    animation-delay: var(--delay, 0ms);
+}
+
+.log-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 28px rgba(64, 48, 31, 0.22), 0 0 0 1px var(--accent);
+}
+
+.log-card__frame {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 6px;
+    background: var(--color-paper-dim);
+    border: 1px solid rgba(42, 35, 24, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.log-card__frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.55) 50%, transparent 58%);
+    transform: translateX(-130%);
+    pointer-events: none;
+}
+
+.log-card:hover .log-card__frame::after {
+    animation: shine-sweep 0.85s var(--ease);
+}
+
+.log-card__frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.5s var(--ease);
+}
+
+.log-card:hover .log-card__frame img {
+    transform: scale(1.035);
+}
+
+.log-card__frame .placeholder-icon,
+.log-card__frame img[src$="Default.png"] {
+    width: 42%;
+    color: var(--accent);
+    opacity: 0.55;
+}
+
+.log-card__date {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    font-weight: 700;
+    margin: 0.7rem 0 0.15rem;
+}
+
+.log-card__title {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 1rem;
+    line-height: 1.3;
+    margin: 0.6rem 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.log-card__meta {
+    font-family: var(--body);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin: 0.35rem 0 0;
+}
+
+.log-card__text {
+    font-family: var(--body);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text-onsurface);
+    margin: 0;
+}
+
+.logbook__empty {
+    padding: 1.5rem 0;
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .about-me__tag {
+        opacity: 1;
+        animation: none;
+    }
+    .scrap {
+        transition: none;
+    }
+}
+
+@media (max-width: 780px) {
+    .about-me {
+        padding: 3.5rem 6vw;
+    }
+    .about-me__grid {
+        flex-direction: column;
+        align-items: center;
+        gap: 2.25rem;
+    }
+    .scrap--note,
+    .scrap--facts,
+    .scrap--photo {
+        flex: 0 0 auto;
+        width: 100%;
+        max-width: 320px;
+        margin-top: 0;
+    }
+    .about-me__sticker {
+        display: none;
+    }
+    .logbook-section {
+        padding: 3rem 6vw 3.5rem;
+        max-height: 200vh;
+    }
+    .logbook__bird-grid {
+        grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+        gap: 0.85rem;
+    }
+}

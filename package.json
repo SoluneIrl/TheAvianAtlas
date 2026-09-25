@@ -1,0 +1,10 @@
+{
+  "name": "the-avian-atlas",
+  "version": "1.0.0",
+  "description": "A personal catalogue of every bird spotted across video games, filed by game.",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000"
+  },
+  "private": true
+}
