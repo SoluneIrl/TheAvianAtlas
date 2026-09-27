@@ -1,6 +1,6 @@
 (function () {
 
-    const NO_BIRDS_GAMES = ['Hollow Knight','Hollow Knight Silksong','Deepest Sword'];
+
 
     const gameListEl   = document.getElementById('gameList');
     const gameSearchEl = document.getElementById('gameSearch');
@@ -792,7 +792,7 @@
         logTabBirdsEl.addEventListener('click', () => showTab('birds'));
         logTabDevEl.addEventListener('click', () => showTab('dev'));
     }
-
+    let NO_BIRDS_GAMES = [];
     function initNoBirds() {
         const listEl = document.getElementById('noBirdsList');
         if (!listEl) return;
@@ -851,9 +851,24 @@
         gamesData = rowsToGames(parseCSV(text));
     }
 
+    async function loadNoBirds() {
+        try {
+            const res = await fetch('Data/nobirds.csv');
+            if (!res.ok) throw new Error('Failed to load nobirds.csv');
+            const text = await res.text();
+            NO_BIRDS_GAMES = parseCSV(text)
+                .map(row => (row.game || '').trim())
+                .filter(Boolean);
+        } catch (err) {
+            console.error(err);
+            NO_BIRDS_GAMES = [];
+        }
+    }
+
     async function init() {
         renderBoardSkeleton();
-        const [, birdsResult] = await Promise.allSettled([loadDevLog(), loadBirds()]);
+        const [, birdsResult] = await Promise.allSettled([loadDevLog(), loadBirds(), loadNoBirds()]);
+        initNoBirds();
 
         if (birdsResult.status === 'fulfilled') {
             renderStats();
@@ -932,7 +947,6 @@
 
     initScrollReveal();
     init();
-    initNoBirds();
     initAboutMe();
     initLogbookTabs();
 })();

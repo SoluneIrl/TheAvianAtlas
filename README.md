@@ -34,7 +34,7 @@ People who helped me in finding birbs are credited below the respective cards.
 - **Reddit and Steam for Collaboration with other people**
 - **Upscaly to increase image resolution**
 - **GIMP for editing Webp format images**
-- **Remove.bg and Apple's Clean Up Tool for clearing images**
+- **Remove.bg, cleanup.pictures and Apple's Clean Up Tool for clearing images**
 - **Canva for making the photo collage**
 - **ChatGPT for generating the Website's Logo and a stylised artwork of me**
 - **Claude for helping me with bug fixes**

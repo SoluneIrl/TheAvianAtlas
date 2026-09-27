@@ -1674,6 +1674,9 @@ body.music-playing:not(.rave-hold) .lightbox__figure {
     border-top: 1px dashed var(--color-border);
     background: var(--color-surface);
     padding: 3.25rem 6vw;
+    max-height: 100vh;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 
 .no-birds__inner {

@@ -193,21 +193,13 @@ def rebuild_birds_csv():
 
     print("birds.csv rebuilt!")
     print(f"  Games found: {len(game_folders)}")
-    print(f"  Total images/files: {len(rows)}")
+    print(f"  Total entries: {len(rows)}")
     if total_converted:
         print(f"  Images converted to .webp: {total_converted}")
     if all_skipped:
         print(f"  Images NOT converted ({len(all_skipped)}):")
         for s in all_skipped:
             print(f"    - {s}")
-
-    if empty_game_folders:
-        print()
-        print("  Heads up,these game folders have no recognized image files, so")
-        print("  they won't appear in the collection. If they're genuinely birdless,")
-        print("  add them to NO_BIRDS_GAMES in app.js; if not, double check the files:")
-        for name in empty_game_folders:
-            print(f"    - {name}")
 
 def update_dev_csv():
     dev_folder = os.path.join(project_root, "Assets", "Dev")
