@@ -55,6 +55,10 @@ def convert_folder_images_to_webp(folder_path):
 
     return converted, skipped
 
+def split_dev_images(value):
+    # The img column can hold several files: "1.png | 2.png | 3.png"
+    return [part.strip() for part in re.split(r"\s*\|\s*", value or "") if part.strip()]
+
 def natural_sort_key(name):
     return [
         int(chunk) if chunk.isdigit() else chunk.lower()
@@ -218,26 +222,27 @@ def update_dev_csv():
                     (row.get("text") or "").strip(),
                     (row.get("img") or "").strip(),
                 ])
-                img = (row.get("img") or "").strip()
-                if img:
+                for img in split_dev_images(row.get("img")):
                     known_images.add(os.path.basename(img))
 
     converted, skipped = convert_folder_images_to_webp(dev_folder)
     if converted:
         for row in existing_rows:
-            img_val = row[2]
-            if not img_val:
+            if not row[2]:
                 continue
-            base, ext = os.path.splitext(img_val)
-            if ext.lower() not in CONVERTIBLE_EXTENSIONS:
-                continue
-            webp_name = base + ".webp"
-            original_still_there = os.path.isfile(os.path.join(dev_folder, img_val))
-            webp_now_there = os.path.isfile(os.path.join(dev_folder, webp_name))
-            if webp_now_there and not original_still_there:
-                row[2] = webp_name
-                known_images.discard(os.path.basename(img_val))
-                known_images.add(webp_name)
+            updated = []
+            for img_val in split_dev_images(row[2]):
+                base, ext = os.path.splitext(img_val)
+                if ext.lower() in CONVERTIBLE_EXTENSIONS:
+                    webp_name = base + ".webp"
+                    original_still_there = os.path.isfile(os.path.join(dev_folder, img_val))
+                    webp_now_there = os.path.isfile(os.path.join(dev_folder, webp_name))
+                    if webp_now_there and not original_still_there:
+                        known_images.discard(os.path.basename(img_val))
+                        known_images.add(webp_name)
+                        img_val = webp_name
+                updated.append(img_val)
+            row[2] = " | ".join(updated)
 
     if os.path.isdir(dev_folder):
         files = [

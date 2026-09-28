@@ -155,6 +155,7 @@
 
     let gamesData = [];
     let devLogRows = [];
+    let smileRows = [];
     let activeGameId = null;
     let sortMode = 'az';
 
@@ -387,7 +388,7 @@
         </div>
         <p class="specimen__id">${catalogNumber(gameIndex, bird.id)}</p>
         <h3 class="specimen__title">${escapeHTML(bird.title)}</h3>
-        ${bird.credit ? `<p class="specimen__credit">By: ${escapeHTML(bird.credit)}</p>` : ''}
+        ${bird.credit ? `<p class="specimen__credit"><span class="specimen__credit-name">${escapeHTML(bird.credit)}</span></p>` : ''}
       `;
 
             const img = card.querySelector('img');
@@ -448,11 +449,16 @@
         lightboxImgEl.alt = item.alt !== undefined ? item.alt : (item.title || '');
 
         const title = item.title || '';
+        // Bird cards: date (same style as the dev log), plus the photo credit if there is one
         const meta = item.meta !== undefined
             ? item.meta
-            : (item.credit ? `Photo by ${item.credit}` : '');
+            : [
+                item.date ? formatLogDate(item.date) : '',
+                item.credit ? `Photo by ${item.credit}` : ''
+            ].filter(Boolean).join(' \u00b7 ');
 
         lightboxCaptionTitleEl.textContent = title;
+        lightboxCaptionTitleEl.hidden = !title;
         lightboxCaptionMetaEl.textContent = meta;
         lightboxCaptionMetaEl.hidden = !meta;
 
@@ -604,10 +610,13 @@
             .map(r => ({
                 date: (r.date || '').trim(),
                 text: (r.text || '').trim(),
-                image: resolveDevImagePath(r.img)
+                images: String(r.img || '')
+                    .split(/\s*\|\s*/)
+                    .map(name => resolveDevImagePath(name))
+                    .filter(Boolean)
             }))
             .filter(item => item.date || item.text)
-            .sort((a, b) => b.date.localeCompare(a.date));
+            .sort((a, b) => a.date.localeCompare(b.date)); // oldest to newest (birb log stays newest first)
     }
 
     function groupBirbLogItems(items) {
@@ -703,6 +712,43 @@
         });
     }
 
+    // dev.csv "text" format:
+    //   - Segments are split on a new line OR on " | ".
+    //   - A segment starting with "- " (or "* ") becomes a bullet.
+    //   - Any other segment is a normal paragraph line.
+    function parseDevText(text) {
+        return String(text || '')
+            .split(/\r?\n|\s+\|\s+/)
+            .map(seg => seg.trim())
+            .filter(Boolean)
+            .map(seg => {
+                const m = seg.match(/^[-*\u2022]\s+(.*)$/);
+                return m ? { bullet: true, text: m[1] } : { bullet: false, text: seg };
+            });
+    }
+
+    function devTextToHTML(text) {
+        const parts = parseDevText(text);
+        let html = '';
+        let list = [];
+        const flush = () => {
+            if (list.length) {
+                html += `<ul class="dev-entry__list">${list.map(t => `<li>${escapeHTML(t)}</li>`).join('')}</ul>`;
+                list = [];
+            }
+        };
+        parts.forEach(part => {
+            if (part.bullet) {
+                list.push(part.text);
+            } else {
+                flush();
+                html += `<p class="dev-entry__line">${escapeHTML(part.text)}</p>`;
+            }
+        });
+        flush();
+        return html;
+    }
+
     function renderDevLog(panelEl, items) {
         if (!panelEl) return;
         panelEl.innerHTML = '';
@@ -712,14 +758,14 @@
             return;
         }
 
-        const lightboxItems = items
-            .filter(item => item.image)
-            .map(item => ({
-                image: item.image,
+        const lightboxItems = items.flatMap(item =>
+            item.images.map(image => ({
+                image,
                 alt: '',
-                title: item.text,
+                title: '',
                 meta: item.date ? formatLogDate(item.date) : ''
-            }));
+            }))
+        );
         const lightboxAccentsForDev = lightboxItems.map((_, i) => LOG_ACCENTS[i % LOG_ACCENTS.length]);
         let imageCursor = -1;
 
@@ -730,15 +776,24 @@
 
             entry.innerHTML = `
         <p class="dev-entry__date">${escapeHTML(formatLogDate(item.date))}</p>
-        <p class="dev-entry__text">${escapeHTML(item.text)}</p>
-        ${item.image ? `<div class="dev-entry__frame"><img src="${escapeHTML(item.image)}" alt="" loading="lazy" /></div>` : ''}
+        <div class="dev-entry__text">${devTextToHTML(item.text)}</div>
+        ${item.images.length ? `<div class="dev-entry__images" style="--n:${item.images.length}">${item.images.map(src => `<div class="dev-entry__frame"><img src="${escapeHTML(src)}" alt="" loading="lazy" /></div>`).join('')}</div>` : ''}
       `;
 
-            const frameEl = entry.querySelector('.dev-entry__frame');
-            const imgEl = entry.querySelector('.dev-entry__frame img');
-            if (imgEl) {
+            entry.querySelectorAll('.dev-entry__frame').forEach(frameEl => {
+                const imgEl = frameEl.querySelector('img');
+                if (!imgEl) return;
                 const thisImageIndex = ++imageCursor;
                 let imageFailed = false;
+
+                // Width proportional to aspect ratio => every image in the row ends up the same height
+                const applyRatio = () => {
+                    if (imgEl.naturalWidth && imgEl.naturalHeight) {
+                        frameEl.style.flexGrow = (imgEl.naturalWidth / imgEl.naturalHeight).toFixed(4);
+                    }
+                };
+                if (imgEl.complete) applyRatio();
+                imgEl.addEventListener('load', applyRatio, { once: true });
 
                 imgEl.addEventListener('error', () => {
                     imageFailed = true;
@@ -765,7 +820,7 @@
                         open();
                     }
                 });
-            }
+            });
 
             panelEl.appendChild(entry);
         });
@@ -865,9 +920,94 @@
         }
     }
 
+    async function loadSmile() {
+        try {
+            const res = await fetch('Data/smile.csv', { cache: 'no-cache' });
+            if (!res.ok) throw new Error('Failed to load smile.csv');
+            const text = await res.text();
+            smileRows = parseCSV(text)
+                .map((r, i) => ({ id: (r.id || '').trim() || String(i + 1), user: (r.user || '').trim(), message: (r.message || '').trim() }))
+                .filter(r => r.user || r.message);
+        } catch (err) {
+            console.error(err);
+            smileRows = [];
+        }
+    }
+
+    // Appreciation strip: two identical groups scroll left to right in a seamless loop.
+    function renderSmile() {
+        const sectionEl = document.getElementById('smile');
+        const trackEl = document.getElementById('smileTrack');
+        const logbookEl = document.getElementById('logbook');
+        if (!sectionEl || !trackEl) return;
+        trackEl.innerHTML = '';
+
+        if (!smileRows.length) {
+            sectionEl.hidden = true;
+            return;
+        }
+
+        const STEP = 260 + 16; // card width + gap (keep in sync with the CSS)
+        const target = Math.max(window.innerWidth, 1600) * 1.1;
+        const reps = Math.max(1, Math.ceil(target / (smileRows.length * STEP)));
+
+        // Fresh random order on every page load. Built once so both scrolling
+        // groups are identical (needed for the seamless loop).
+        const shuffle = (arr) => {
+            const a = arr.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        };
+        const sequence = [];
+        for (let r = 0; r < reps; r++) {
+            const batch = shuffle(smileRows);
+            const last = sequence[sequence.length - 1];
+            if (last && batch.length > 1 && batch[0] === last) {
+                [batch[0], batch[1]] = [batch[1], batch[0]];
+            }
+            sequence.push(...batch);
+        }
+        // Also avoid the loop seam repeating the same card back to back
+        if (sequence.length > 2 && sequence[0] === sequence[sequence.length - 1]) {
+            [sequence[0], sequence[1]] = [sequence[1], sequence[0]];
+        }
+
+        const buildGroup = (isCopy) => {
+            const group = document.createElement('div');
+            group.className = 'smile-group';
+            if (isCopy) group.setAttribute('aria-hidden', 'true');
+            sequence.forEach((row, n) => {
+                const card = document.createElement('article');
+                card.className = 'smile-card';
+                card.dataset.id = row.id;
+                card.style.setProperty('--accent', ACCENT_CYCLE[n % ACCENT_CYCLE.length]);
+                card.style.setProperty('--d', `${-((n % 7) * 0.5)}s`);
+                if (row.message) card.title = row.message;
+
+                const userEl = document.createElement('p');
+                userEl.className = 'smile-card__user';
+                userEl.textContent = row.user;
+                const msgEl = document.createElement('p');
+                msgEl.className = 'smile-card__msg';
+                msgEl.textContent = row.message;
+
+                card.append(userEl, msgEl);
+                group.appendChild(card);
+            });
+            return group;
+        };
+
+        trackEl.append(buildGroup(false), buildGroup(true));
+        trackEl.style.setProperty('--smile-duration', `${Math.round((sequence.length * STEP) / 45)}s`);
+        sectionEl.hidden = !(logbookEl && !logbookEl.hidden);
+    }
+
     async function init() {
         renderBoardSkeleton();
-        const [, birdsResult] = await Promise.allSettled([loadDevLog(), loadBirds(), loadNoBirds()]);
+        const [, birdsResult] = await Promise.allSettled([loadDevLog(), loadBirds(), loadNoBirds(), loadSmile()]);
         initNoBirds();
 
         if (birdsResult.status === 'fulfilled') {
@@ -896,6 +1036,7 @@
             boardGridEl.innerHTML = '';
         }
         renderLogbook();
+        renderSmile();
     }
 
     function initScrollReveal() {
@@ -920,11 +1061,13 @@
         const toggleEl = document.getElementById('aboutMeToggle');
         const sectionEl = document.getElementById('aboutMe');
         const logbookSectionEl = document.getElementById('logbook');
+        const smileSectionEl = document.getElementById('smile');
         if (!toggleEl || !sectionEl) return;
 
         const forceClosed = () => {
             sectionEl.hidden = true;
             if (logbookSectionEl) logbookSectionEl.hidden = true;
+            if (smileSectionEl) smileSectionEl.hidden = true;
             toggleEl.setAttribute('aria-expanded', 'false');
         };
         forceClosed();
@@ -936,6 +1079,7 @@
             const opening = sectionEl.hidden;
             sectionEl.hidden = !opening;
             if (logbookSectionEl) logbookSectionEl.hidden = !opening;
+            if (smileSectionEl) smileSectionEl.hidden = !opening || !smileRows.length;
             toggleEl.setAttribute('aria-expanded', String(opening));
 
             if (opening) {

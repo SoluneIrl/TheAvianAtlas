@@ -1150,11 +1150,59 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
     margin: 0;
 }
 
+/* Credit: quiet italic byline pinned to the bottom of the card */
+.specimen {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Credit band: search-box brown, tag lettering (Caveat bold) */
 .specimen__credit {
-    font-family: var(--body);
-    font-size: 0.72rem;
-    color: var(--text-secondary);
-    margin: 0.4rem 0 0;
+    margin: auto -0.9rem -1.1rem;
+    padding: 0.28rem 0.9rem 0.34rem;
+    background: var(--color-surface-deep);
+    border-radius: 0 0 calc(var(--radius) - 3px) calc(var(--radius) - 3px);
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1.15;
+    letter-spacing: 0.05em;
+    color: var(--color-paper);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.specimen__credit-name {
+    color: inherit;
+}
+
+/* Breathing room between the title and the credit band (only when a credit exists) */
+.specimen__title:has(+ .specimen__credit) {
+    margin-bottom: 0.85rem;
+}
+
+/* Rainbow mode: flowing rainbow strip, same trick as the tag's glow */
+body.music-playing:not(.rave-hold) .specimen__credit {
+    background-color: var(--color-surface-deep);
+    background-image: linear-gradient(90deg in oklch longer hue, oklch(0.72 0.19 20), oklch(0.72 0.19 20));
+    background-size: 200% 100%;
+    background-repeat: repeat-x;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(64, 48, 31, 0.45);
+    animation: credit-rainbow-flow 2.4s linear infinite;
+    animation-delay: var(--delay, 0ms);
+}
+
+@keyframes credit-rainbow-flow {
+    from { background-position: 200% 0; }
+    to   { background-position: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.music-playing:not(.rave-hold) .specimen__credit {
+        animation: none;
+    }
 }
 
 .specimen--skeleton {
@@ -2586,9 +2634,60 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     margin: 0;
 }
 
-.dev-entry__frame {
+
+.dev-entry__line {
+    margin: 0;
+}
+
+.dev-entry__line + .dev-entry__line,
+.dev-entry__line + .dev-entry__list {
+    margin-top: 0.4rem;
+}
+
+.dev-entry__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.dev-entry__list li {
+    position: relative;
+    padding-left: 1.15rem;
+    margin-top: 0.3rem;
+}
+
+.dev-entry__list li:first-child {
+    margin-top: 0;
+}
+
+.dev-entry__list li::before {
+    content: "";
+    position: absolute;
+    left: 0.15rem;
+    top: 0.62em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-accent-gold);
+}
+
+
+/* One or more screenshots, side by side, all the same height */
+.dev-entry__images {
+    --gap: 0.6rem;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: var(--gap);
     margin-top: 0.75rem;
-    max-width: 320px;
+    /* up to 320px per image, so a single image looks exactly as before */
+    max-width: calc(var(--n, 1) * 320px + (var(--n, 1) - 1) * var(--gap));
+}
+
+.dev-entry__frame {
+    /* flex-grow is set from each image's aspect ratio in app.js */
+    flex: 1 1 0;
+    min-width: 0;
     border-radius: 6px;
     overflow: hidden;
     border: 1px solid rgba(42, 35, 24, 0.14);
@@ -2753,5 +2852,135 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     .logbook__bird-grid {
         grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
         gap: 0.85rem;
+    }
+}
+
+
+/* ---------- Appreciation strip (below the Logbook) ---------- */
+.smile-section {
+    --smile-card-w: 260px;
+    --smile-card-h: 7.2rem;
+    border-top: 1px dashed var(--color-border);
+    background: var(--color-surface-2);
+    padding: 1rem 0 1.1rem;
+    text-align: center;
+}
+
+.smile-section[hidden] {
+    display: none;
+}
+
+.smile-section__heading {
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: 0.02em;
+    color: var(--color-accent-wine);
+    margin: 0 0 0.35rem;
+}
+
+.smile-marquee {
+    overflow: hidden;
+    padding: 0.55rem 0;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.smile-track {
+    display: flex;
+    width: max-content;
+    animation: smile-swim var(--smile-duration, 60s) linear infinite;
+}
+
+.smile-marquee:hover .smile-track {
+    animation-play-state: paused;
+}
+
+.smile-group {
+    display: flex;
+    gap: 1rem;
+    padding-right: 1rem;
+}
+
+@keyframes smile-swim {
+    from { transform: translateX(-50%); }
+    to   { transform: translateX(0); }
+}
+
+.smile-card {
+    --accent: var(--color-accent-gold);
+    flex: 0 0 var(--smile-card-w);
+    width: var(--smile-card-w);
+    height: var(--smile-card-h);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.7rem 0.95rem 0.6rem;
+    text-align: left;
+    background: var(--color-paper);
+    color: var(--text-onsurface);
+    border-radius: var(--radius);
+    border-bottom: 3px solid var(--accent);
+    box-shadow: 0 6px 14px rgba(64, 48, 31, 0.14);
+    overflow: hidden;
+    animation: smile-bob 3.6s ease-in-out infinite alternate;
+    animation-delay: var(--d, 0s);
+}
+
+@keyframes smile-bob {
+    from { transform: translateY(-3px) rotate(-0.4deg); }
+    to   { transform: translateY(3px) rotate(0.4deg); }
+}
+
+.smile-card__user {
+    margin: 0;
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: 1.2rem;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    color: color-mix(in srgb, var(--accent) 70%, var(--text-primary));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.smile-card__msg {
+    margin: 0;
+    font-family: var(--display);
+    font-style: italic;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: var(--text-onsurface);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Rainbow mode: card edge cycles colour like the bird cards */
+body.music-playing:not(.rave-hold) .smile-card {
+    animation-name: smile-bob, rave-accent;
+    animation-duration: 3.6s, 3.5s;
+    animation-timing-function: ease-in-out, linear;
+    animation-iteration-count: infinite, infinite;
+    animation-direction: alternate, normal;
+    animation-delay: var(--d, 0s), var(--d, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .smile-marquee {
+        overflow-x: auto;
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+    .smile-track,
+    .smile-card,
+    body.music-playing:not(.rave-hold) .smile-card {
+        animation: none;
+    }
+    .smile-group[aria-hidden="true"] {
+        display: none;
     }
 }
