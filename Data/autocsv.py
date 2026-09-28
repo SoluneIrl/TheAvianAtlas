@@ -90,9 +90,13 @@ def rebuild_birds_csv():
         with open(csv_file, "r", newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                image_key = (row.get("image") or "").strip()
+                game_key = (row.get("game") or "").strip().lower()
+                image_name = os.path.basename((row.get("image") or "").strip())
+                # Keyed by (game, filename): the same filename in two different
+                # games must never share credits or dates.
+                image_key = (game_key, image_name) if image_name else None
                 game_title_key = (
-                    (row.get("game") or "").strip().lower(),
+                    game_key,
                     (row.get("title") or "").strip().lower(),
                 )
 
@@ -108,19 +112,17 @@ def rebuild_birds_csv():
                         existing_dates_by_image[image_key] = date_value
                     existing_dates_by_game_title[game_title_key] = date_value
 
-    def find_existing_credit(bare_filename, full_image_path, game_name, title):
-        if bare_filename in existing_credits_by_image:
-            return existing_credits_by_image[bare_filename]
-        if full_image_path in existing_credits_by_image:
-            return existing_credits_by_image[full_image_path]
+    def find_existing_credit(bare_filename, game_name, title):
+        image_key = (game_name.strip().lower(), bare_filename)
+        if image_key in existing_credits_by_image:
+            return existing_credits_by_image[image_key]
         key = (game_name.strip().lower(), title.strip().lower())
         return existing_credits_by_game_title.get(key, "")
 
-    def find_existing_date(bare_filename, full_image_path, game_name, title):
-        if bare_filename in existing_dates_by_image:
-            return existing_dates_by_image[bare_filename]
-        if full_image_path in existing_dates_by_image:
-            return existing_dates_by_image[full_image_path]
+    def find_existing_date(bare_filename, game_name, title):
+        image_key = (game_name.strip().lower(), bare_filename)
+        if image_key in existing_dates_by_image:
+            return existing_dates_by_image[image_key]
         key = (game_name.strip().lower(), title.strip().lower())
         return existing_dates_by_game_title.get(key, "")
 
@@ -173,13 +175,11 @@ def rebuild_birds_csv():
             title = title.replace("_", " ")
             title = smart_capitalize(title)
 
-            full_image_path = f"Assets/Games/{game_name}/{filename}"
-
-            credit = find_existing_credit(filename, full_image_path, game_name, title)
+            credit = find_existing_credit(filename, game_name, title)
             if credit:
                 carried_over += 1
 
-            date_added = find_existing_date(filename, full_image_path, game_name, title)
+            date_added = find_existing_date(filename, game_name, title)
             if date_added:
                 dates_carried_over += 1
             else:
