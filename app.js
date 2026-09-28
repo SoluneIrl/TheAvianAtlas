@@ -1083,7 +1083,7 @@
             toggleEl.setAttribute('aria-expanded', String(opening));
 
             if (opening) {
-                sectionEl.scrollIntoView({ behavior: 'auto', block: 'start' });
+                sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 spawnConfetti(e.clientX, e.clientY);
             }
         });

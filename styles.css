@@ -35,6 +35,11 @@ html {
     width: 100%;
 }
 
+/* Smooth scrolling in every scrollable box (Logbook panels, sidebar, game list...) */
+* {
+    scroll-behavior: smooth;
+}
+
 @supports not selector(::-webkit-scrollbar) {
     html {
         scrollbar-width: auto;
@@ -66,7 +71,7 @@ html {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
+    html, * { scroll-behavior: auto; }
     * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
@@ -1499,9 +1504,8 @@ body.music-playing:not(.rave-hold) .specimen__credit {
     align-items: center;
     justify-content: center;
     padding: 4vh 4vw;
-    background: rgba(31, 22, 14, 0.92);
-    backdrop-filter: blur(6px);
-    animation: lightbox-fade 0.2s var(--ease);
+    background: rgba(31, 22, 14, 0.94);
+    animation: lightbox-fade 0.15s ease-out;
     cursor: zoom-out;
 }
 
@@ -1521,7 +1525,7 @@ body.music-playing:not(.rave-hold) .specimen__credit {
     align-items: center;
     gap: 0.9rem;
     cursor: default;
-    animation: lightbox-pop 0.28s var(--ease);
+    animation: lightbox-pop 0.18s ease-out;
 }
 
 .lightbox__media {
@@ -1530,21 +1534,8 @@ body.music-playing:not(.rave-hold) .specimen__credit {
 }
 
 @keyframes lightbox-pop {
-    0%   { opacity: 0; transform: scale(0.9) rotate(-3deg) translateY(10px); }
-    60%  { opacity: 1; transform: scale(1.03) rotate(1.2deg) translateY(-2px); }
-    100% { opacity: 1; transform: scale(1) rotate(0deg) translateY(0); }
-}
-
-@keyframes lightbox-pop-rave {
-    0%   { opacity: 0; transform: scale(0.8) rotate(-10deg) translateY(16px); }
-    50%  { opacity: 1; transform: scale(1.08) rotate(6deg) translateY(-6px); }
-    75%  { transform: scale(0.97) rotate(-2deg) translateY(2px); }
-    100% { opacity: 1; transform: scale(1) rotate(0deg) translateY(0); }
-}
-
-body.music-playing:not(.rave-hold) .lightbox__figure {
-    animation-name: lightbox-pop-rave;
-    animation-duration: 0.45s;
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
 }
 
 .lightbox__mat {
@@ -2008,6 +1999,7 @@ body.music-playing:not(.rave-hold) .logbook__tab.is-active::after {
     body.music-playing:not(.rave-hold) .hero__visual,
     body.music-playing:not(.rave-hold) .scrap,
     body.music-playing:not(.rave-hold) .no-birds__chip,
+    body.music-playing:not(.rave-hold) .dev-entry__frame,
     body.music-playing:not(.rave-hold) .logbook__tab.is-active,
     body.music-playing:not(.rave-hold) .contact__btn::before, body.music-playing:not(.rave-hold) .contact__btn::after,
     body.music-playing:not(.rave-hold) .lightbox__close::before, body.music-playing:not(.rave-hold) .lightbox__close::after,
@@ -2023,7 +2015,10 @@ body.music-playing:not(.rave-hold) .logbook__tab.is-active::after {
     html.music-playing:not(.rave-hold),
     body.music-playing:not(.rave-hold),
     body.music-playing:not(.rave-hold) .sidebar__sticky,
-    body.music-playing:not(.rave-hold) .game-list {
+    body.music-playing:not(.rave-hold) .game-list,
+    body.music-playing:not(.rave-hold) .logbook-section,
+    body.music-playing:not(.rave-hold) .no-birds,
+    body.music-playing:not(.rave-hold) .logbook__panel {
         scrollbar-color: oklch(0.72 0.2 320) var(--color-surface-2);
     }
 }
@@ -2031,7 +2026,11 @@ body.music-playing:not(.rave-hold) .logbook__tab.is-active::after {
 html.music-playing:not(.rave-hold)::-webkit-scrollbar-thumb,
 body.music-playing:not(.rave-hold)::-webkit-scrollbar-thumb,
 body.music-playing:not(.rave-hold) .sidebar__sticky::-webkit-scrollbar-thumb,
-body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb {
+body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb,
+body.music-playing:not(.rave-hold) .logbook-section::-webkit-scrollbar-thumb,
+body.music-playing:not(.rave-hold) .no-birds::-webkit-scrollbar-thumb,
+body.music-playing:not(.rave-hold) .logbook__panel::-webkit-scrollbar-thumb,
+body.music-playing:not(.rave-hold) *::-webkit-scrollbar-thumb {
     background-image: repeating-linear-gradient(
             45deg,
             oklch(0.75 0.16 350) 0,
@@ -2049,7 +2048,11 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb {
 html.music-playing:not(.rave-hold)::-webkit-scrollbar-thumb:hover,
 body.music-playing:not(.rave-hold)::-webkit-scrollbar-thumb:hover,
 body.music-playing:not(.rave-hold) .sidebar__sticky::-webkit-scrollbar-thumb:hover,
-body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
+body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover,
+body.music-playing:not(.rave-hold) .logbook-section::-webkit-scrollbar-thumb:hover,
+body.music-playing:not(.rave-hold) .no-birds::-webkit-scrollbar-thumb:hover,
+body.music-playing:not(.rave-hold) .logbook__panel::-webkit-scrollbar-thumb:hover,
+body.music-playing:not(.rave-hold) *::-webkit-scrollbar-thumb:hover {
     background-color: transparent;
 }
 
@@ -2061,7 +2064,11 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     html.music-playing:not(.rave-hold)::-webkit-scrollbar-thumb,
     body.music-playing:not(.rave-hold)::-webkit-scrollbar-thumb,
     body.music-playing:not(.rave-hold) .sidebar__sticky::-webkit-scrollbar-thumb,
-    body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb {
+    body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb,
+    body.music-playing:not(.rave-hold) .logbook-section::-webkit-scrollbar-thumb,
+    body.music-playing:not(.rave-hold) .no-birds::-webkit-scrollbar-thumb,
+    body.music-playing:not(.rave-hold) .logbook__panel::-webkit-scrollbar-thumb,
+    body.music-playing:not(.rave-hold) *::-webkit-scrollbar-thumb {
         animation: none;
     }
 }
@@ -2690,9 +2697,17 @@ body.music-playing:not(.rave-hold) .game-list::-webkit-scrollbar-thumb:hover {
     min-width: 0;
     border-radius: 6px;
     overflow: hidden;
-    border: 1px solid rgba(42, 35, 24, 0.14);
+    --dev-outline: #2F7F79; /* deep teal - change this one value to recolour */
+    border: 2px solid var(--dev-outline);
     background: var(--color-paper-dim);
     transition: box-shadow 0.25s var(--ease), transform 0.25s var(--ease);
+}
+
+/* Rainbow mode: outline cycles colour, same as the "no birds" chips */
+body.music-playing:not(.rave-hold) .dev-entry__frame {
+    --accent: var(--color-accent-gold);
+    animation: rave-accent 3.5s linear infinite;
+    border-color: var(--accent);
 }
 
 .dev-entry__frame:hover,
