@@ -1656,12 +1656,57 @@ body.music-playing:not(.rave-hold) .specimen__credit {
 }
 
 @media (max-width: 640px) {
-    .lightbox__nav {
-        position: fixed;
-        top: 50%;
+    /* Mobile: image, then caption/date, then prev/next buttons in a row below.
+       .lightbox__media uses display: contents so its children (mat + buttons)
+       become grid items of the figure alongside the caption. */
+    .lightbox__figure {
+        display: grid;
+        grid-template-columns: auto auto;
+        justify-content: center;
+        justify-items: center;
+        gap: 0.9rem 1rem;
     }
-    .lightbox__nav--prev { left: 0.5rem; }
-    .lightbox__nav--next { right: 0.5rem; }
+
+    .lightbox__media { display: contents; }
+
+    .lightbox__mat,
+    .lightbox__caption {
+        grid-column: 1 / -1;
+        grid-row: auto;
+    }
+
+    .lightbox__mat { grid-row: 1; }
+    .lightbox__caption { grid-row: 2; }
+
+    /* Leave room for the caption and button row under the image */
+    .lightbox__img {
+        max-height: calc(64vh - (var(--mat-pad) * 2));
+    }
+
+    .lightbox .lightbox__nav,
+    .lightbox .lightbox__nav:hover,
+    .lightbox .lightbox__nav:active {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        transform: none;
+    }
+
+    .lightbox .lightbox__nav:hover  { transform: scale(1.08); }
+    .lightbox .lightbox__nav:active { transform: scale(0.9); }
+
+    .lightbox .lightbox__nav--prev {
+        grid-row: 3;
+        grid-column: 1;
+        justify-self: end;
+    }
+
+    .lightbox .lightbox__nav--next {
+        grid-row: 3;
+        grid-column: 2;
+        justify-self: start;
+    }
 }
 
 .contact {

@@ -293,6 +293,28 @@
         return `NO. ${g}.${b}`;
     }
 
+    // Scrolls only the sidebar's own scroll container so the active item is
+    // visible. (element.scrollIntoView would also scroll the page itself,
+    // which made the site jump past the hero on load.)
+    function scrollItemIntoListView(item) {
+        let container = item.parentElement;
+        while (container && container !== document.body) {
+            const style = getComputedStyle(container);
+            const scrollable = /(auto|scroll)/.test(style.overflowY) &&
+                container.scrollHeight > container.clientHeight;
+            if (scrollable) break;
+            container = container.parentElement;
+        }
+        if (!container || container === document.body) return;
+
+        const cRect = container.getBoundingClientRect();
+        const iRect = item.getBoundingClientRect();
+        let delta = 0;
+        if (iRect.top < cRect.top) delta = iRect.top - cRect.top;
+        else if (iRect.bottom > cRect.bottom) delta = iRect.bottom - cRect.bottom;
+        if (delta) container.scrollBy({ top: delta, behavior: 'smooth' });
+    }
+
     function renderSidebar() {
         const query = (gameSearchEl?.value || '').trim().toLowerCase();
         const visibleGames = query
@@ -335,9 +357,7 @@
             gameListEl.appendChild(li);
 
             if (isActive) {
-                requestAnimationFrame(() => {
-                    li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-                });
+                requestAnimationFrame(() => scrollItemIntoListView(li));
             }
         });
     }
