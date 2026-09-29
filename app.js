@@ -53,6 +53,21 @@
         });
     }
 
+    function safeDecode(str) {
+        try { return decodeURIComponent(str); } catch (_) { return str; }
+    }
+
+    function clickPoint(e) {
+        if (e.detail === 0 && e.clientX === 0 && e.clientY === 0) {
+            const el = e.currentTarget || e.target;
+            if (el && el.getBoundingClientRect) {
+                const r = el.getBoundingClientRect();
+                return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+            }
+        }
+        return { x: e.clientX, y: e.clientY };
+    }
+
     function spawnConfetti(x, y, count) {
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
         const rave = document.body.classList.contains('music-playing');
@@ -120,7 +135,8 @@
         musicToggleEl.addEventListener('click', (e) => {
             if (!grooveShownThisLoad) {
                 grooveShownThisLoad = true;
-                triggerColorSplash(e.clientX, e.clientY);
+                const pt = clickPoint(e);
+                triggerColorSplash(pt.x, pt.y);
             }
             if (bgMusicEl.paused) {
                 bgMusicEl.play().catch(() => {
@@ -344,7 +360,8 @@
         <span class="game-btn__count">${game.birds.length}</span>
       `;
             btn.addEventListener('click', (e) => {
-                spawnConfetti(e.clientX, e.clientY);
+                const pt = clickPoint(e);
+                spawnConfetti(pt.x, pt.y);
                 selectGame(game.id);
             });
 
@@ -479,15 +496,16 @@
         if (accent !== undefined && lightboxMatEl) {
             lightboxMatEl.style.setProperty('--accent', accent);
         }
+        const wasHidden = lightboxEl.hidden;
         lightboxEl.hidden = false;
         document.body.style.overflow = 'hidden';
-        lightboxCloseEl.focus();
+        if (wasHidden) lightboxCloseEl.focus();
     }
 
     function closeLightbox() {
         if (!lightboxEl) return;
         lightboxEl.hidden = true;
-        lightboxImgEl.src = '';
+        lightboxImgEl.removeAttribute('src');
         document.body.style.overflow = '';
         lightboxBirds = [];
         lightboxAccents = [];
@@ -544,7 +562,7 @@
     }
 
     window.addEventListener('hashchange', () => {
-        const targetId = decodeURIComponent(location.hash.slice(1));
+        const targetId = safeDecode(location.hash.slice(1));
         if (targetId && targetId !== activeGameId && gamesData.some(g => g.id === targetId)) {
             selectGame(targetId, { updateHash: false });
         }
@@ -630,7 +648,7 @@
                     .filter(Boolean)
             }))
             .filter(item => item.date || item.text)
-            .sort((a, b) => a.date.localeCompare(b.date)); // oldest to newest (birb log stays newest first)
+            .sort((a, b) => a.date.localeCompare(b.date));
     }
 
     function groupBirbLogItems(items) {
@@ -793,7 +811,7 @@
             entry.querySelectorAll('.dev-entry__frame').forEach(frameEl => {
                 const imgEl = frameEl.querySelector('img');
                 if (!imgEl) return;
-                const thisImageIndex = ++imageCursor;
+                const lbItem = lightboxItems[++imageCursor];
                 let imageFailed = false;
 
                 const applyRatio = () => {
@@ -807,6 +825,12 @@
                 imgEl.addEventListener('error', () => {
                     imageFailed = true;
                     frameEl.remove();
+
+                    const at = lightboxItems.indexOf(lbItem);
+                    if (at !== -1) {
+                        lightboxItems.splice(at, 1);
+                        lightboxAccentsForDev.pop();
+                    }
                 }, { once: true });
 
                 frameEl.style.cursor = 'zoom-in';
@@ -820,7 +844,7 @@
                     const x = (e && typeof e.clientX === 'number') ? e.clientX : rect.left + rect.width / 2;
                     const y = (e && typeof e.clientY === 'number') ? e.clientY : rect.top + rect.height / 2;
                     spawnConfetti(x, y);
-                    openLightboxAt(lightboxItems, lightboxAccentsForDev, thisImageIndex);
+                    openLightboxAt(lightboxItems, lightboxAccentsForDev, lightboxItems.indexOf(lbItem));
                 };
                 frameEl.addEventListener('click', open);
                 frameEl.addEventListener('keydown', (e) => {
@@ -1030,7 +1054,7 @@
                 });
             }
             if (gamesData.length) {
-                const hashId = decodeURIComponent(location.hash.slice(1));
+                const hashId = safeDecode(location.hash.slice(1));
                 const startGame = gamesData.find(g => g.id === hashId) || gamesData[0];
                 selectGame(startGame.id, { updateHash: false });
             }
@@ -1090,7 +1114,8 @@
 
             if (opening) {
                 sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                spawnConfetti(e.clientX, e.clientY);
+                const pt = clickPoint(e);
+                spawnConfetti(pt.x, pt.y);
             }
         });
     }
@@ -1102,7 +1127,7 @@
             const link = e.target.closest && e.target.closest('a[href^="#"]');
             if (!link || link.target === '_blank') return;
 
-            const id = decodeURIComponent(link.getAttribute('href').slice(1));
+            const id = safeDecode(link.getAttribute('href').slice(1));
             const target = id ? document.getElementById(id) : null;
             if (!target) return;
 

@@ -4,9 +4,10 @@ import csv
 import datetime
 
 try:
-    from PIL import Image
+    from PIL import Image, ImageOps
 except ImportError:
     Image = None
+    ImageOps = None
 
 base_folder = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(base_folder)
@@ -36,13 +37,18 @@ def convert_folder_images_to_webp(folder_path):
 
         try:
             with Image.open(file_path) as img:
+                icc_profile = img.info.get("icc_profile")
+                img = ImageOps.exif_transpose(img)
                 if img.mode in ("RGBA", "LA") or (
                     img.mode == "P" and "transparency" in img.info
                 ):
                     img = img.convert("RGBA")
                 elif img.mode != "RGB":
                     img = img.convert("RGB")
-                img.save(webp_path, "WEBP", quality=WEBP_QUALITY, method=6)
+                save_kwargs = {"quality": WEBP_QUALITY, "method": 6}
+                if icc_profile:
+                    save_kwargs["icc_profile"] = icc_profile
+                img.save(webp_path, "WEBP", **save_kwargs)
             os.remove(file_path)
             converted += 1
         except Exception as e:
@@ -86,7 +92,7 @@ def rebuild_birds_csv():
     existing_dates_by_game_title = {}
 
     if os.path.isfile(csv_file):
-        with open(csv_file, "r", newline="", encoding="utf-8") as f:
+        with open(csv_file, "r", newline="", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 game_key = (row.get("game") or "").strip().lower()
@@ -211,7 +217,7 @@ def update_dev_csv():
     known_images = set()
 
     if os.path.isfile(csv_file):
-        with open(csv_file, "r", newline="", encoding="utf-8") as f:
+        with open(csv_file, "r", newline="", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 existing_rows.append([
@@ -288,7 +294,6 @@ def update_dev_csv():
         print()
         print(f"  Heads up, couldn't find the folder: {dev_folder}")
         print("  No image rows were added this run; existing rows were left as it is.")
-
 
 if __name__ == "__main__":
     print()
