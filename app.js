@@ -1,7 +1,5 @@
 (function () {
 
-
-
     const gameListEl   = document.getElementById('gameList');
     const gameSearchEl = document.getElementById('gameSearch');
     const boardTitleEl = document.getElementById('boardTitle');
@@ -293,9 +291,6 @@
         return `NO. ${g}.${b}`;
     }
 
-    // Scrolls only the sidebar's own scroll container so the active item is
-    // visible. (element.scrollIntoView would also scroll the page itself,
-    // which made the site jump past the hero on load.)
     function scrollItemIntoListView(item) {
         let container = item.parentElement;
         while (container && container !== document.body) {
@@ -469,7 +464,6 @@
         lightboxImgEl.alt = item.alt !== undefined ? item.alt : (item.title || '');
 
         const title = item.title || '';
-        // Bird cards: date (same style as the dev log), plus the photo credit if there is one
         const meta = item.meta !== undefined
             ? item.meta
             : [
@@ -732,10 +726,6 @@
         });
     }
 
-    // dev.csv "text" format:
-    //   - Segments are split on a new line OR on " | ".
-    //   - A segment starting with "- " (or "* ") becomes a bullet.
-    //   - Any other segment is a normal paragraph line.
     function parseDevText(text) {
         return String(text || '')
             .split(/\r?\n|\s+\|\s+/)
@@ -806,7 +796,6 @@
                 const thisImageIndex = ++imageCursor;
                 let imageFailed = false;
 
-                // Width proportional to aspect ratio => every image in the row ends up the same height
                 const applyRatio = () => {
                     if (imgEl.naturalWidth && imgEl.naturalHeight) {
                         frameEl.style.flexGrow = (imgEl.naturalWidth / imgEl.naturalHeight).toFixed(4);
@@ -954,7 +943,6 @@
         }
     }
 
-    // Appreciation strip: two identical groups scroll left to right in a seamless loop.
     function renderSmile() {
         const sectionEl = document.getElementById('smile');
         const trackEl = document.getElementById('smileTrack');
@@ -971,8 +959,6 @@
         const target = Math.max(window.innerWidth, 1600) * 1.1;
         const reps = Math.max(1, Math.ceil(target / (smileRows.length * STEP)));
 
-        // Fresh random order on every page load. Built once so both scrolling
-        // groups are identical (needed for the seamless loop).
         const shuffle = (arr) => {
             const a = arr.slice();
             for (let i = a.length - 1; i > 0; i--) {
@@ -990,7 +976,7 @@
             }
             sequence.push(...batch);
         }
-        // Also avoid the loop seam repeating the same card back to back
+
         if (sequence.length > 2 && sequence[0] === sequence[sequence.length - 1]) {
             [sequence[0], sequence[1]] = [sequence[1], sequence[0]];
         }
@@ -1046,7 +1032,7 @@
             if (gamesData.length) {
                 const hashId = decodeURIComponent(location.hash.slice(1));
                 const startGame = gamesData.find(g => g.id === hashId) || gamesData[0];
-                selectGame(startGame.id);
+                selectGame(startGame.id, { updateHash: false });
             }
         } else {
             console.error(birdsResult.reason);
@@ -1109,6 +1095,23 @@
         });
     }
 
+    function initInPageAnchors() {
+        document.addEventListener('click', (e) => {
+            if (e.defaultPrevented || e.button !== 0) return;
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            const link = e.target.closest && e.target.closest('a[href^="#"]');
+            if (!link || link.target === '_blank') return;
+
+            const id = decodeURIComponent(link.getAttribute('href').slice(1));
+            const target = id ? document.getElementById(id) : null;
+            if (!target) return;
+
+            e.preventDefault();
+            target.scrollIntoView({ block: 'start' });
+        });
+    }
+
+    initInPageAnchors();
     initScrollReveal();
     init();
     initAboutMe();

@@ -35,7 +35,6 @@ html {
     width: 100%;
 }
 
-/* Smooth scrolling in every scrollable box (Logbook panels, sidebar, game list...) */
 * {
     scroll-behavior: smooth;
 }
@@ -720,7 +719,6 @@ body.music-playing:not(.rave-hold) .tag::after {
     border-radius: var(--radius);
     color: var(--color-paper);
     font-family: var(--body);
-    /* 16px min — anything smaller makes iOS Safari zoom in on focus */
     font-size: max(0.85rem, 16px);
     padding: 0.55rem 0.75rem 0.55rem 2.15rem;
     transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
@@ -1155,13 +1153,11 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
     margin: 0;
 }
 
-/* Credit: quiet italic byline pinned to the bottom of the card */
 .specimen {
     display: flex;
     flex-direction: column;
 }
 
-/* Credit band: search-box brown, tag lettering (Caveat bold) */
 .specimen__credit {
     margin: auto -0.9rem -1.1rem;
     padding: 0.28rem 0.9rem 0.34rem;
@@ -1182,12 +1178,10 @@ body.music-playing:not(.rave-hold) .specimen__frame::after {
     color: inherit;
 }
 
-/* Breathing room between the title and the credit band (only when a credit exists) */
 .specimen__title:has(+ .specimen__credit) {
     margin-bottom: 0.85rem;
 }
 
-/* Rainbow mode: flowing rainbow strip, same trick as the tag's glow */
 body.music-playing:not(.rave-hold) .specimen__credit {
     background-color: var(--color-surface-deep);
     background-image: linear-gradient(90deg in oklch longer hue, oklch(0.72 0.19 20), oklch(0.72 0.19 20));
@@ -1656,9 +1650,7 @@ body.music-playing:not(.rave-hold) .specimen__credit {
 }
 
 @media (max-width: 640px) {
-    /* Mobile: image, then caption/date, then prev/next buttons in a row below.
-       .lightbox__media uses display: contents so its children (mat + buttons)
-       become grid items of the figure alongside the caption. */
+
     .lightbox__figure {
         display: grid;
         grid-template-columns: auto auto;
@@ -1677,8 +1669,6 @@ body.music-playing:not(.rave-hold) .specimen__credit {
 
     .lightbox__mat { grid-row: 1; }
     .lightbox__caption { grid-row: 2; }
-
-    /* Leave room for the caption and button row under the image */
     .lightbox__img {
         max-height: calc(64vh - (var(--mat-pad) * 2));
     }
@@ -2723,8 +2713,6 @@ body.music-playing:not(.rave-hold) *::-webkit-scrollbar-thumb:hover {
     background: var(--color-accent-gold);
 }
 
-
-/* One or more screenshots, side by side, all the same height */
 .dev-entry__images {
     --gap: 0.6rem;
     display: flex;
@@ -2732,23 +2720,21 @@ body.music-playing:not(.rave-hold) *::-webkit-scrollbar-thumb:hover {
     align-items: flex-start;
     gap: var(--gap);
     margin-top: 0.75rem;
-    /* up to 320px per image, so a single image looks exactly as before */
     max-width: calc(var(--n, 1) * 320px + (var(--n, 1) - 1) * var(--gap));
 }
 
 .dev-entry__frame {
-    /* flex-grow is set from each image's aspect ratio in app.js */
+
     flex: 1 1 0;
     min-width: 0;
     border-radius: 6px;
     overflow: hidden;
-    --dev-outline: #2F7F79; /* deep teal - change this one value to recolour */
+    --dev-outline: #2F7F79;
     border: 2px solid var(--dev-outline);
     background: var(--color-paper-dim);
     transition: box-shadow 0.25s var(--ease), transform 0.25s var(--ease);
 }
 
-/* Rainbow mode: outline cycles colour, same as the "no birds" chips */
 body.music-playing:not(.rave-hold) .dev-entry__frame {
     --accent: var(--color-accent-gold);
     animation: rave-accent 3.5s linear infinite;
@@ -2915,8 +2901,6 @@ body.music-playing:not(.rave-hold) .dev-entry__frame {
     }
 }
 
-
-/* ---------- Appreciation strip (below the Logbook) ---------- */
 .smile-section {
     --smile-card-w: 260px;
     --smile-card-h: 7.2rem;
@@ -3019,7 +3003,6 @@ body.music-playing:not(.rave-hold) .dev-entry__frame {
     overflow: hidden;
 }
 
-/* Rainbow mode: card edge cycles colour like the bird cards */
 body.music-playing:not(.rave-hold) .smile-card {
     animation-name: smile-bob, rave-accent;
     animation-duration: 3.6s, 3.5s;
