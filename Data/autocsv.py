@@ -56,7 +56,6 @@ def convert_folder_images_to_webp(folder_path):
     return converted, skipped
 
 def split_dev_images(value):
-    # The img column can hold several files: "1.png | 2.png | 3.png"
     return [part.strip() for part in re.split(r"\s*\|\s*", value or "") if part.strip()]
 
 def natural_sort_key(name):
@@ -92,8 +91,6 @@ def rebuild_birds_csv():
             for row in reader:
                 game_key = (row.get("game") or "").strip().lower()
                 image_name = os.path.basename((row.get("image") or "").strip())
-                # Keyed by (game, filename): the same filename in two different
-                # games must never share credits or dates.
                 image_key = (game_key, image_name) if image_name else None
                 game_title_key = (
                     game_key,
