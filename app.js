@@ -591,12 +591,12 @@
         animateCount(statGamesEl, gamesData.length);
 
         if (statContributorsEl) {
-            const uniqueContributors = new Set();
+            let totalCredits = 0;
             gamesData.forEach(g => g.birds.forEach(bird => {
                 const name = (bird.credit || '').trim();
-                if (name) uniqueContributors.add(name);
+                if (name) totalCredits++;
             }));
-            animateCount(statContributorsEl, uniqueContributors.size);
+            animateCount(statContributorsEl, totalCredits);
         }
     }
 
@@ -979,7 +979,7 @@
             return;
         }
 
-        const STEP = 260 + 16; // card width + gap (keep in sync with the CSS)
+        const STEP = 260 + 16;
         const target = Math.max(window.innerWidth, 1600) * 1.1;
         const reps = Math.max(1, Math.ceil(target / (smileRows.length * STEP)));
 
