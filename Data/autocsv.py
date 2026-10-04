@@ -1,303 +1,292 @@
-import os
-import re
+import argparse
 import csv
 import datetime
+import os
+import re
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 try:
     from PIL import Image, ImageOps
 except ImportError:
-    Image = None
-    ImageOps = None
+    Image = ImageOps = None
 
-base_folder = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(base_folder)
-IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"}
-CONVERTIBLE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
-WEBP_QUALITY = 85
+DATA_DIR = Path(__file__).resolve().parent
+ROOT = DATA_DIR.parent
+GAMES_DIR = ROOT / "Assets" / "Games"
+DEV_DIR = ROOT / "Assets" / "Dev"
+THUMBS_DIR = ROOT / "Assets" / "Thumbs"
+BIRDS_CSV = DATA_DIR / "birds.csv"
+DEV_CSV = DATA_DIR / "dev.csv"
 
-def convert_folder_images_to_webp(folder_path):
-    if Image is None or not os.path.isdir(folder_path):
-        return 0, []
-    converted = 0
-    skipped = []
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"}
+CONVERTIBLE_EXTS = {".png", ".jpg", ".jpeg"}
+THUMB_SRC_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"}
+PLACEHOLDER_TEXT = "TODO: describe this update"
+RESAMPLE = Image.Resampling.LANCZOS if Image and hasattr(Image, "Resampling") else getattr(Image, "LANCZOS", None)
 
-    for filename in os.listdir(folder_path):
-        file_path = os.path.join(folder_path, filename)
-        if not os.path.isfile(file_path) or filename.startswith("."):
+def natural_key(name):
+    return [int(c) if c.isdigit() else c.lower() for c in re.split(r"(\d+)", name)]
+
+def list_images(folder):
+    """Top-level image files in a folder, naturally sorted (empty if folder missing)."""
+    if not folder.is_dir():
+        return []
+    files = [p for p in folder.iterdir()
+             if p.is_file() and not p.name.startswith(".") and p.suffix.lower() in IMAGE_EXTS]
+    return sorted(files, key=lambda p: natural_key(p.name))
+
+def has_alpha(im):
+    return im.mode in ("RGBA", "LA") or (im.mode == "P" and "transparency" in im.info)
+
+def split_images(value):
+    return [p.strip() for p in re.split(r"\s*\|\s*", value or "") if p.strip()]
+
+def smart_capitalize(text):
+    out = []
+    for word in text.split(" "):
+        for i, ch in enumerate(word):
+            if ch.isalpha():
+                word = word[:i] + ch.upper() + word[i + 1:]
+                break
+        out.append(word)
+    return " ".join(out)
+
+
+def iso_mtime(path):
+    return datetime.date.fromtimestamp(path.stat().st_mtime).isoformat()
+
+def human(n):
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024 or unit == "GB":
+            return f"{int(n)} B" if unit == "B" else f"{n:.1f} {unit}"
+        n /= 1024
+
+def read_csv(path):
+    if not path.is_file():
+        return []
+    with open(path, "r", newline="", encoding="utf-8-sig") as f:
+        return list(csv.DictReader(f))
+
+
+def write_csv(path, header, rows):
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(header)
+        w.writerows(rows)
+
+def convert_folder_to_webp(folder, quality):
+    """Convert PNG/JPG in `folder` to .webp and delete the originals."""
+    converted, skipped = 0, []
+    if Image is None or not folder.is_dir():
+        return converted, skipped
+
+    for src in sorted(folder.iterdir()):
+        if not src.is_file() or src.name.startswith(".") or src.suffix.lower() not in CONVERTIBLE_EXTS:
             continue
-
-        base, ext = os.path.splitext(filename)
-        if ext.lower() not in CONVERTIBLE_EXTENSIONS:
+        dest = src.with_suffix(".webp")
+        if dest.exists():
+            skipped.append(f"{src.name} (a .webp with that name already exists)")
             continue
-
-        webp_path = os.path.join(folder_path, base + ".webp")
-        if os.path.exists(webp_path):
-            skipped.append(f"{filename} (a .webp with that name already exists)")
-            continue
-
         try:
-            with Image.open(file_path) as img:
-                icc_profile = img.info.get("icc_profile")
-                img = ImageOps.exif_transpose(img)
-                if img.mode in ("RGBA", "LA") or (
-                    img.mode == "P" and "transparency" in img.info
-                ):
-                    img = img.convert("RGBA")
-                elif img.mode != "RGB":
-                    img = img.convert("RGB")
-                save_kwargs = {"quality": WEBP_QUALITY, "method": 6}
-                if icc_profile:
-                    save_kwargs["icc_profile"] = icc_profile
-                img.save(webp_path, "WEBP", **save_kwargs)
-            os.remove(file_path)
+            with Image.open(src) as im:
+                if getattr(im, "is_animated", False):
+                    skipped.append(f"{src.name} (animated - kept as is)")
+                    continue
+                icc = im.info.get("icc_profile")
+                im = ImageOps.exif_transpose(im)
+                im = im.convert("RGBA" if has_alpha(im) else "RGB")
+                kwargs = {"quality": quality, "method": 6}
+                if icc:
+                    kwargs["icc_profile"] = icc
+                im.save(dest, "WEBP", **kwargs)
+            src.unlink()
             converted += 1
-        except Exception as e:
-            skipped.append(f"{filename} ({e})")
-            if os.path.exists(webp_path):
-                try:
-                    os.remove(webp_path)
-                except OSError:
-                    pass
-
+        except Exception as exc:
+            skipped.append(f"{src.name} ({exc})")
+            dest.unlink(missing_ok=True)
     return converted, skipped
 
-def split_dev_images(value):
-    return [part.strip() for part in re.split(r"\s*\|\s*", value or "") if part.strip()]
-
-def natural_sort_key(name):
-    return [
-        int(chunk) if chunk.isdigit() else chunk.lower()
-        for chunk in re.split(r"(\d+)", name)
-    ]
-
 def rebuild_birds_csv():
-    games_folder = os.path.join(project_root, "Assets", "Games")
-    csv_file = os.path.join(base_folder, "birds.csv")
     header = ["game", "id", "title", "image", "credit", "date"]
-
-    def smart_capitalize(text):
-        words = text.split(" ")
-        fixed_words = []
-        for word in words:
-            for i, ch in enumerate(word):
-                if ch.isalpha():
-                    word = word[:i] + ch.upper() + word[i + 1:]
-                    break
-            fixed_words.append(word)
-        return " ".join(fixed_words)
-
-    existing_credits_by_image = {}
-    existing_credits_by_game_title = {}
-    existing_dates_by_image = {}
-    existing_dates_by_game_title = {}
-
-    if os.path.isfile(csv_file):
-        with open(csv_file, "r", newline="", encoding="utf-8-sig") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                game_key = (row.get("game") or "").strip().lower()
-                image_name = os.path.basename((row.get("image") or "").strip())
-                image_key = (game_key, image_name) if image_name else None
-                game_title_key = (
-                    game_key,
-                    (row.get("title") or "").strip().lower(),
-                )
-
-                credit = (row.get("credit") or "").strip()
-                if credit:
-                    if image_key:
-                        existing_credits_by_image[image_key] = credit
-                    existing_credits_by_game_title[game_title_key] = credit
-
-                date_value = (row.get("date") or "").strip()
-                if date_value:
-                    if image_key:
-                        existing_dates_by_image[image_key] = date_value
-                    existing_dates_by_game_title[game_title_key] = date_value
-
-    def find_existing_credit(bare_filename, game_name, title):
-        image_key = (game_name.strip().lower(), bare_filename)
-        if image_key in existing_credits_by_image:
-            return existing_credits_by_image[image_key]
-        key = (game_name.strip().lower(), title.strip().lower())
-        return existing_credits_by_game_title.get(key, "")
-
-    def find_existing_date(bare_filename, game_name, title):
-        image_key = (game_name.strip().lower(), bare_filename)
-        if image_key in existing_dates_by_image:
-            return existing_dates_by_image[image_key]
-        key = (game_name.strip().lower(), title.strip().lower())
-        return existing_dates_by_game_title.get(key, "")
-
-    if not os.path.isdir(games_folder):
-        print(f"Heads up — couldn't find the folder: {games_folder}")
-        print("Skipped rebuilding birds.csv.")
+    if not GAMES_DIR.is_dir():
+        print(f"Heads up - couldn't find {GAMES_DIR}\nSkipped rebuilding birds.csv.")
         return
 
-    game_folders = [
-        folder
-        for folder in os.listdir(games_folder)
-        if os.path.isdir(os.path.join(games_folder, folder))
-    ]
+    memory = {"credit": {}, "date": {}}
+    for row in read_csv(BIRDS_CSV):
+        game = (row.get("game") or "").strip().lower()
+        image = os.path.basename((row.get("image") or "").strip())
+        title = (row.get("title") or "").strip().lower()
+        for field in memory:
+            value = (row.get(field) or "").strip()
+            if value:
+                if image:
+                    memory[field][("img", game, image)] = value
+                memory[field][("title", game, title)] = value
 
-    game_folders.sort(key=str.lower)
+    def recall(field, game, image, title):
+        g = game.lower()
+        return (memory[field].get(("img", g, image))
+                or memory[field].get(("title", g, title.lower()), ""))
 
-    if Image is None:
-        print("  Note: Pillow isn't installed, so PNG/JPG files won't be")
-        print("  auto-converted to .webp this run. Run: pip install Pillow")
+    games = sorted((p for p in GAMES_DIR.iterdir() if p.is_dir()), key=lambda p: p.name.lower())
+    rows, empty = [], []
+    credits_kept = dates_kept = 0
 
-    rows = []
-    carried_over = 0
-    dates_carried_over = 0
-    dates_backfilled = 0
-    empty_game_folders = []
-    total_converted = 0
-    all_skipped = []
-
-    for game_name in game_folders:
-        game_path = os.path.join(games_folder, game_name)
-
-        converted, skipped = convert_folder_images_to_webp(game_path)
-        total_converted += converted
-        all_skipped.extend(f"{game_name}/{s}" for s in skipped)
-
-        files = [
-            filename
-            for filename in os.listdir(game_path)
-            if os.path.isfile(os.path.join(game_path, filename))
-            and not filename.startswith(".")
-            and os.path.splitext(filename)[1].lower() in IMAGE_EXTENSIONS
-        ]
-        files.sort(key=natural_sort_key)
-
+    for game in games:
+        files = list_images(game)
         if not files:
-            empty_game_folders.append(game_name)
+            empty.append(game.name)
+        for i, f in enumerate(files, start=1):
+            title = smart_capitalize(f.stem.replace("_", " "))
+            credit = recall("credit", game.name, f.name, title)
+            date = recall("date", game.name, f.name, title)
+            credits_kept += bool(credit)
+            dates_kept += bool(date)
+            rows.append([game.name, i, title, f.name, credit, date or iso_mtime(f)])
 
-        for file_id, filename in enumerate(files, start=1):
-            title, extension = os.path.splitext(filename)
-            title = title.replace("_", " ")
-            title = smart_capitalize(title)
-
-            credit = find_existing_credit(filename, game_name, title)
-            if credit:
-                carried_over += 1
-
-            date_added = find_existing_date(filename, game_name, title)
-            if date_added:
-                dates_carried_over += 1
-            else:
-                file_path = os.path.join(game_path, filename)
-                mtime = os.path.getmtime(file_path)
-                date_added = datetime.date.fromtimestamp(mtime).isoformat()
-                dates_backfilled += 1
-
-            rows.append([game_name, file_id, title, filename, credit, date_added])
-
-    with open(csv_file, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        writer.writerows(rows)
-
+    write_csv(BIRDS_CSV, header, rows)
     print("birds.csv rebuilt!")
-    print(f"  Games found: {len(game_folders)}")
-    print(f"  Total entries: {len(rows)}")
-    if total_converted:
-        print(f"  Images converted to .webp: {total_converted}")
-    if all_skipped:
-        print(f"  Images NOT converted ({len(all_skipped)}):")
-        for s in all_skipped:
-            print(f"    - {s}")
+    print(f"  Games found: {len(games)}  |  Total entries: {len(rows)}")
+    print(f"  Credits kept: {credits_kept}  |  Dates kept: {dates_kept}  |  Dates backfilled: {len(rows) - dates_kept}")
+    if empty:
+        print(f"  Game folders with no images: {', '.join(empty)}")
 
 def update_dev_csv():
-    dev_folder = os.path.join(project_root, "Assets", "Dev")
-    csv_file = os.path.join(base_folder, "dev.csv")
     header = ["date", "text", "img"]
-    PLACEHOLDER_TEXT = "TODO: describe this update"
-    existing_rows = []
-    known_images = set()
+    rows = [[(r.get("date") or "").strip(), (r.get("text") or "").strip(), (r.get("img") or "").strip()]
+            for r in read_csv(DEV_CSV)]
 
-    if os.path.isfile(csv_file):
-        with open(csv_file, "r", newline="", encoding="utf-8-sig") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                existing_rows.append([
-                    (row.get("date") or "").strip(),
-                    (row.get("text") or "").strip(),
-                    (row.get("img") or "").strip(),
-                ])
-                for img in split_dev_images(row.get("img")):
-                    known_images.add(os.path.basename(img))
+    for row in rows:
+        updated = []
+        for img in split_images(row[2]):
+            stem, ext = os.path.splitext(img)
+            if ext.lower() in CONVERTIBLE_EXTS and not (DEV_DIR / img).is_file() and (DEV_DIR / (stem + ".webp")).is_file():
+                img = stem + ".webp"
+            updated.append(img)
+        row[2] = " | ".join(updated)
 
-    converted, skipped = convert_folder_images_to_webp(dev_folder)
-    if converted:
-        for row in existing_rows:
-            if not row[2]:
-                continue
-            updated = []
-            for img_val in split_dev_images(row[2]):
-                base, ext = os.path.splitext(img_val)
-                if ext.lower() in CONVERTIBLE_EXTENSIONS:
-                    webp_name = base + ".webp"
-                    original_still_there = os.path.isfile(os.path.join(dev_folder, img_val))
-                    webp_now_there = os.path.isfile(os.path.join(dev_folder, webp_name))
-                    if webp_now_there and not original_still_there:
-                        known_images.discard(os.path.basename(img_val))
-                        known_images.add(webp_name)
-                        img_val = webp_name
-                updated.append(img_val)
-            row[2] = " | ".join(updated)
+    known = {os.path.basename(i) for row in rows for i in split_images(row[2])}
+    new_rows = [[iso_mtime(f), PLACEHOLDER_TEXT, f.name] for f in list_images(DEV_DIR) if f.name not in known]
 
-    if os.path.isdir(dev_folder):
-        files = [
-            filename
-            for filename in os.listdir(dev_folder)
-            if os.path.isfile(os.path.join(dev_folder, filename))
-            and not filename.startswith(".")
-            and os.path.splitext(filename)[1].lower() in IMAGE_EXTENSIONS
-        ]
-    else:
-        files = []
-    files.sort(key=natural_sort_key)
-
-    new_rows = []
-    for filename in files:
-        if filename in known_images:
-            continue
-        file_path = os.path.join(dev_folder, filename)
-        mtime = os.path.getmtime(file_path)
-        date_added = datetime.date.fromtimestamp(mtime).isoformat()
-        new_rows.append([date_added, PLACEHOLDER_TEXT, filename])
-
-    with open(csv_file, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        writer.writerows(existing_rows)
-        writer.writerows(new_rows)
-
+    write_csv(DEV_CSV, header, rows + new_rows)
     print("dev.csv updated!")
-    print(f"  Existing entries kept: {len(existing_rows)}")
-    print(f"  New image rows added: {len(new_rows)}")
-    if converted:
-        print(f"  Images converted to .webp: {converted}")
-    if skipped:
-        print(f"  Images NOT converted ({len(skipped)}):")
-        for s in skipped:
-            print(f"    - {s}")
+    print(f"  Existing entries kept: {len(rows)}  |  New image rows added: {len(new_rows)}")
+    for date, _, name in new_rows:
+        print(f"    - {date}  {name}   (edit its \"text\" in dev.csv)")
+    if not DEV_DIR.is_dir():
+        print(f"  Heads up, couldn't find {DEV_DIR}; existing rows were left as is.")
 
-    if new_rows:
-        print()
-        print("  New rows added (go edit their \"text\" in dev.csv):")
-        for date_added, _, filename in new_rows:
-            print(f"    - {date_added}  {filename}")
+def make_thumb(job):
+    src, dest, size, quality = job
+    try:
+        with Image.open(src) as im:
+            if getattr(im, "is_animated", False):
+                return src, "animated", 0, 0
+            im = ImageOps.exif_transpose(im)
+            im.thumbnail((size, size), RESAMPLE)  # only ever shrinks
+            im = im.convert("RGBA" if has_alpha(im) else "RGB")
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            im.save(dest, "WEBP", quality=quality, method=6)
+        return src, "ok", src.stat().st_size, dest.stat().st_size
+    except Exception as exc:
+        return src, f"failed: {exc}", 0, 0
 
-    if not os.path.isdir(dev_folder):
+
+def generate_thumbs(size, quality, force, prune, workers):
+    if not GAMES_DIR.is_dir():
+        print(f"Can't find {GAMES_DIR} - skipped thumbnails.")
+        return True
+
+    jobs, expected, up_to_date = [], set(), 0
+    for src in sorted(p for p in GAMES_DIR.rglob("*") if p.is_file() and p.suffix.lower() in THUMB_SRC_EXTS):
+        dest = Path(str(THUMBS_DIR / src.relative_to(GAMES_DIR)) + ".webp")
+        expected.add(dest)
+        if not force and dest.exists() and dest.stat().st_mtime >= src.stat().st_mtime:
+            up_to_date += 1
+        else:
+            jobs.append((src, dest, size, quality))
+
+    made = animated = failed = 0
+    src_bytes = thumb_bytes = 0
+    if jobs:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for src, status, sb, tb in pool.map(make_thumb, jobs):
+                if status == "ok":
+                    made += 1
+                    src_bytes += sb
+                    thumb_bytes += tb
+                elif status == "animated":
+                    animated += 1
+                    print(f"  skipped  {src} (animated - the site will use the original)")
+                else:
+                    failed += 1
+                    print(f"  {status.split(':')[0]}   {src}:{status.split(':', 1)[1]}")
+
+    orphans = [p for p in THUMBS_DIR.rglob("*.webp") if p not in expected] if THUMBS_DIR.is_dir() else []
+    if orphans and prune:
+        for p in orphans:
+            p.unlink()
+        for d in sorted((d for d in THUMBS_DIR.rglob("*") if d.is_dir()), reverse=True):
+            if not any(d.iterdir()):
+                d.rmdir()
+
+    print(f"Thumbnails: created {made}, up to date {up_to_date}, animated/skipped {animated}, failed {failed}.")
+    if made:
+        saved = 100 * (1 - thumb_bytes / max(src_bytes, 1))
+        print(f"  {human(src_bytes)} of originals -> {human(thumb_bytes)} ({saved:.0f}% smaller)")
+    if orphans:
+        print(f"  {len(orphans)} orphaned thumbnail(s) " + ("removed." if prune else "found - run with --prune to remove them."))
+    return failed == 0
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--size", type=int, default=480)
+    ap.add_argument("--quality", type=int, default=80)
+    ap.add_argument("--webp-quality", type=int, default=85)
+    ap.add_argument("--workers", type=int, default=os.cpu_count() or 4)
+    ap.add_argument("--force", action="store_true")
+    ap.add_argument("--prune", action="store_true")
+    ap.add_argument("--skip-convert", action="store_true")
+    ap.add_argument("--skip-csv", action="store_true")
+    ap.add_argument("--skip-thumbs", action="store_true")
+    args = ap.parse_args()
+
+    needs_pillow = not (args.skip_convert and args.skip_thumbs)
+    if Image is None and needs_pillow:
+        print("Note: Pillow isn't installed, so conversion and thumbnails are skipped.  Run: pip install Pillow")
+        args.skip_convert = args.skip_thumbs = True
+
+    print()
+    if not args.skip_convert:
+        total, skipped = 0, []
+        folders = [DEV_DIR]
+        if GAMES_DIR.is_dir():
+            folders += sorted(p for p in GAMES_DIR.iterdir() if p.is_dir())
+        for folder in folders:
+            n, s = convert_folder_to_webp(folder, args.webp_quality)
+            total += n
+            skipped += [f"{folder.name}/{x}" for x in s]
+        print(f"Converted to .webp: {total}")
+        if skipped:
+            print(f"Not converted ({len(skipped)}):")
+            for s in skipped:
+                print(f"  - {s}")
         print()
-        print(f"  Heads up, couldn't find the folder: {dev_folder}")
-        print("  No image rows were added this run; existing rows were left as it is.")
+
+    if not args.skip_csv:
+        rebuild_birds_csv()
+        print()
+        update_dev_csv()
+        print()
+
+    ok = True
+    if not args.skip_thumbs:
+        ok = generate_thumbs(args.size, args.quality, args.force, args.prune, args.workers)
+        print()
+    return 0 if ok else 1
 
 if __name__ == "__main__":
-    print()
-    rebuild_birds_csv()
-    print()
-    update_dev_csv()
-    print()
+    sys.exit(main())

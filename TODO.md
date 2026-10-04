@@ -1,0 +1,84 @@
+## Image update needed
+- 
+
+## Ongoing Entries
+- Enter the Gungeon
+- Exit the Gungeon
+- Valorant ( Easter Eggs )
+- Aniimo
+- Palworld
+- Stardew Valley
+- Terraria
+- Brawl Stars
+- Badland
+- Minecraft Legends
+- Minecraft Dungeons 
+- Hades
+- Hades 2
+
+## Games to go through
+- Subway Surfers
+- Angry Birds
+- Angry Birds Space
+- Angry Birds Seasons
+- Pokemon GO
+- Pokemon Ruby
+- Hill Climb Racing
+- Hill Climb Racing 2
+- Fruit Ninja
+- 8 Ball Pool
+- Dragon City
+- Crossy Roads
+- Geometry Dash
+- Geometry Dash Subzero
+- Geometry Dash Meltdown
+- Geometry Dash Breeze
+- Plants Vs Zombies Heroes
+- Nine Sols
+- Kingdom Rush 2-6
+- Ori and the Blind Forest
+- Rocket League
+- 
+## Completed games
+- Alpaca Stacka
+- Poinpy
+- Clash Royale
+- Bloons TD 6
+- Celeste
+- CookieRun Crumble
+- Minecraft
+- Death's Door
+- Flappy Bird
+- Forager
+- Gris
+- Neva
+- Journey
+- Hollow Knight Silksong
+- Just Shapes and Beats
+- Kingdom Rush
+- Kintsugi
+- The Short Bread Game
+- Mirth Melody
+- Crack Mountain
+- Lost in Play
+- Ori and the Will of the Wisps
+- Plants Vs Zombies
+- Plants Vs Zombies 2
+- Postmouse
+- Restoring the Past
+- Rift of the Necrodancer
+- Rocket League Sideswipe
+- Super Meat Boy
+- Survivor.io
+- Talking Larry
+- Undertale
+
+## Games with No Birds
+- Hollow Knight
+- Deepest Sword
+- Talking Tom
+- Talking Ben
+- Talking Ginger
+- Nice Jumper
+- Neon Beats
+- The Binding of Isaac Rebirth

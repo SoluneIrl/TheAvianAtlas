@@ -7,6 +7,7 @@
     const boardGridEl  = document.getElementById('boardGrid');
     const boardSortEl      = document.getElementById('boardSort');
     const boardSortLabelEl = boardSortEl ? boardSortEl.closest('.board__sort-label') : null;
+    const boardSortMenuEl  = document.getElementById('boardSortMenu');
     const statBirdsEl  = document.getElementById('statBirds');
     const statGamesEl  = document.getElementById('statGames');
     const statContributorsEl = document.getElementById('statContributors');
@@ -28,6 +29,14 @@
     const logTabDevEl       = document.getElementById('logTabDev');
     const logPanelBirdsEl   = document.getElementById('logPanelBirds');
     const logPanelDevEl     = document.getElementById('logPanelDev');
+    const lightboxFigureEl  = document.querySelector('.lightbox__figure');
+    const lightboxCounterEl = document.getElementById('lightboxCounter');
+    const boardStickyEl      = document.getElementById('boardSticky');
+    const boardStickyTitleEl = document.getElementById('boardStickyTitle');
+    const boardStickyMetaEl  = document.getElementById('boardStickyMeta');
+    const boardStickyTopEl   = document.getElementById('boardStickyTop');
+
+    const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const PLAY_ICON  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.4086 9.35258C23.5305 10.5065 23.5305 13.4935 21.4086 14.6474L8.59662 21.6145C6.53435 22.736 4 21.2763 4 18.9671L4 5.0329C4 2.72368 6.53435 1.26402 8.59661 2.38548L21.4086 9.35258Z"/></svg>';
     const PAUSE_ICON = '<svg viewBox="-1 0 8 8" fill="currentColor"><path d="M172,3605 C171.448,3605 171,3605.448 171,3606 L171,3612 C171,3612.552 171.448,3613 172,3613 C172.552,3613 173,3612.552 173,3612 L173,3606 C173,3605.448 172.552,3605 172,3605 M177,3606 L177,3612 C177,3612.552 176.552,3613 176,3613 C175.448,3613 175,3612.552 175,3612 L175,3606 C175,3605.448 175.448,3605 176,3605 C176.552,3605 177,3605.448 177,3606" transform="translate(-171,-3605)"/></svg>';
@@ -164,8 +173,27 @@
     }
 
     const ACCENT_CYCLE = ['var(--color-accent-gold)', 'var(--color-accent-wine-bright)', 'var(--color-accent-umber)'];
-
     const PLACEHOLDER_ICON = `<img src="Assets/Resources/Default.png" alt="Default Card Image"/>`
+    const USE_THUMBS = true;
+    const GAMES_ROOT = 'Assets/Games';
+    const THUMBS_ROOT = 'Assets/Thumbs';
+
+    function thumbPathFor(fullPath) {
+        if (!USE_THUMBS || !fullPath || !fullPath.startsWith(GAMES_ROOT + '/')) return '';
+        return THUMBS_ROOT + fullPath.slice(GAMES_ROOT.length) + '.webp';
+    }
+
+    function withFullFallback(img, bird, onFail) {
+        const onError = () => {
+            if (bird.thumb && bird.image && img.getAttribute('src') === bird.thumb) {
+                img.src = bird.image;
+                return;
+            }
+            img.removeEventListener('error', onError);
+            onFail();
+        };
+        img.addEventListener('error', onError);
+    }
 
     let gamesData = [];
     let devLogRows = [];
@@ -289,10 +317,14 @@
                 });
                 order.push(gameName);
             }
-            byName.get(gameName).birds.push({
-                id: r.id || String(byName.get(gameName).birds.length + 1),
+            const entry = byName.get(gameName);
+            const image = resolveImagePath(gameName, r.image);
+            entry.birds.push({
+                key: entry.birds.length,
+                id: r.id || String(entry.birds.length + 1),
                 title: r.title || 'Untitled bird',
-                image: resolveImagePath(gameName, r.image),
+                image,
+                thumb: thumbPathFor(image),
                 credit: r.credit || '',
                 date: (r.date || '').trim()
             });
@@ -326,8 +358,49 @@
         if (delta) container.scrollBy({ top: delta, behavior: 'smooth' });
     }
 
+    let indicatorPlaced = false;
+
+    function positionSidebarIndicator(snap) {
+        const li = gameListEl.querySelector('.game-item.active');
+        if (!li) {
+            gameListEl.style.setProperty('--ind-o', '0');
+            indicatorPlaced = false;
+            return;
+        }
+        const instant = snap || !indicatorPlaced;
+        if (instant) gameListEl.classList.add('is-indicator-snap');
+        gameListEl.style.setProperty('--ind-y', li.offsetTop + 'px');
+        gameListEl.style.setProperty('--ind-h', li.offsetHeight + 'px');
+        gameListEl.style.setProperty('--ind-o', '1');
+        if (instant) {
+            void gameListEl.offsetWidth;
+            gameListEl.classList.remove('is-indicator-snap');
+        }
+        indicatorPlaced = true;
+    }
+
+    window.addEventListener('resize', () => positionSidebarIndicator(true));
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => positionSidebarIndicator(true));
+    }
+
+    function highlightMatch(name, query) {
+        if (!query) return escapeHTML(name);
+        const lower = name.toLowerCase();
+        let out = '';
+        let pos = 0;
+        let idx;
+        while ((idx = lower.indexOf(query, pos)) !== -1) {
+            out += escapeHTML(name.slice(pos, idx))
+                + '<mark class="game-btn__match">' + escapeHTML(name.slice(idx, idx + query.length)) + '</mark>';
+            pos = idx + query.length;
+        }
+        return out + escapeHTML(name.slice(pos));
+    }
+
     function renderSidebar() {
-        const query = (gameSearchEl?.value || '').trim().toLowerCase();
+        const rawQuery = (gameSearchEl?.value || '').trim();
+        const query = rawQuery.toLowerCase();
         const visibleGames = query
             ? gamesData.filter(g => g.name.toLowerCase().includes(query))
             : gamesData;
@@ -339,6 +412,8 @@
             empty.className = 'game-list__empty';
             empty.textContent = `No games match “${gameSearchEl.value.trim()}”.`;
             gameListEl.appendChild(empty);
+            gameListEl.style.setProperty('--ind-o', '0');
+            indicatorPlaced = false;
             return;
         }
 
@@ -356,13 +431,13 @@
             if (isActive) btn.setAttribute('aria-current', 'true');
             btn.innerHTML = `
         <span class="game-btn__index">${String(i + 1).padStart(2, '0')}</span>
-        <span class="game-btn__name">${escapeHTML(game.name)}</span>
+        <span class="game-btn__name">${highlightMatch(game.name, query)}</span>
         <span class="game-btn__count">${game.birds.length}</span>
       `;
             btn.addEventListener('click', (e) => {
                 const pt = clickPoint(e);
                 spawnConfetti(pt.x, pt.y);
-                selectGame(game.id);
+                selectGame(game.id, { scrollToBoard: true });
             });
 
             li.appendChild(btn);
@@ -372,39 +447,114 @@
                 requestAnimationFrame(() => scrollItemIntoListView(li));
             }
         });
+
+        positionSidebarIndicator(false);
     }
 
-    function renderBoard() {
+    function setStickyBarText(title, meta) {
+        if (boardStickyTitleEl) boardStickyTitleEl.textContent = title;
+        if (boardStickyMetaEl) boardStickyMetaEl.textContent = meta;
+    }
+
+    function updateStickyBar() {
+        if (!boardStickyEl) return;
+        const boardEl = document.querySelector('.board');
+        const headerEl = boardTitleEl.parentElement;
+        let show = false;
+        if (boardEl && headerEl && activeGameId) {
+            const headerRect = headerEl.getBoundingClientRect();
+            const boardRect = boardEl.getBoundingClientRect();
+            show = headerRect.bottom < 0 && boardRect.bottom > 160;
+        }
+        boardStickyEl.classList.toggle('is-visible', show);
+        if (show) {
+            boardStickyEl.removeAttribute('inert');
+            boardStickyEl.removeAttribute('aria-hidden');
+        } else {
+            boardStickyEl.setAttribute('inert', '');
+            boardStickyEl.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    let stickyRAF = 0;
+    function scheduleStickyUpdate() {
+        if (stickyRAF) return;
+        stickyRAF = requestAnimationFrame(() => { stickyRAF = 0; updateStickyBar(); });
+    }
+    window.addEventListener('scroll', scheduleStickyUpdate, { passive: true });
+    window.addEventListener('resize', scheduleStickyUpdate);
+
+    if (boardStickyTopEl) {
+        boardStickyTopEl.addEventListener('click', () => {
+            const boardEl = document.querySelector('.board');
+            if (!boardEl) return;
+            window.scrollTo({ top: boardEl.getBoundingClientRect().top + window.scrollY });
+        });
+    }
+
+    function trackImageLoad(frameEl, img) {
+        if (!frameEl || !img) return;
+        if (img.complete && img.naturalWidth) {
+            frameEl.classList.remove('is-loading');
+        } else {
+            img.addEventListener('load', () => frameEl.classList.remove('is-loading'), { once: true });
+        }
+    }
+
+    function renderBoard(opts) {
+        const wantFlip = !!(opts && opts.flip) && !prefersReducedMotion();
         const game = gamesData.find(g => g.id === activeGameId);
         if (!game) {
             boardTitleEl.textContent = 'Pick a game to start birdwatching';
             boardMetaEl.textContent = '';
+            setStickyBarText('', '');
             if (boardSortLabelEl) boardSortLabelEl.hidden = true;
             boardGridEl.innerHTML = `<div class="board__empty">Choose a game from the list on the left to see what I've spotted so far.</div>`;
+            updateStickyBar();
             return;
         }
 
         const gameIndex = gamesData.indexOf(game);
         boardTitleEl.textContent = game.name;
         boardMetaEl.textContent = `${game.birds.length} bird${game.birds.length === 1 ? '' : 's'} logged`;
+        setStickyBarText(game.name, boardMetaEl.textContent);
         if (boardSortLabelEl) boardSortLabelEl.hidden = false;
 
-        boardTitleEl.parentElement.classList.remove('board__header--enter');
-        void boardTitleEl.parentElement.offsetWidth;
-        boardTitleEl.parentElement.classList.add('board__header--enter');
+        if (!wantFlip) {
+            boardTitleEl.parentElement.classList.remove('board__header--enter');
+            void boardTitleEl.parentElement.offsetWidth;
+            boardTitleEl.parentElement.classList.add('board__header--enter');
+        }
 
         if (!game.birds.length) {
             boardGridEl.innerHTML = `<div class="board__empty">No birbs logged for this game yet — check back soon!</div>`;
+            updateStickyBar();
             return;
         }
+
+        const prevCards = new Map();
+        if (wantFlip) {
+            Array.from(boardGridEl.children).forEach(c => {
+                if (c.dataset && c.dataset.key !== undefined) {
+                    prevCards.set(c.dataset.key, {
+                        left: c.offsetLeft,
+                        top: c.offsetTop,
+                        img: c.querySelector('.specimen__frame img')
+                    });
+                }
+            });
+        }
+        const doFlip = wantFlip && prevCards.size > 0;
 
         boardGridEl.innerHTML = '';
         const displayBirds = sortBirds(game.birds, sortMode);
         const gameAccents = displayBirds.map((_, i) => ACCENT_CYCLE[(i + gameIndex) % ACCENT_CYCLE.length]);
 
         displayBirds.forEach((bird, i) => {
+            const birdKey = String(bird.key);
             const card = document.createElement('article');
             card.className = 'specimen';
+            card.dataset.key = birdKey;
             const tilt = (i % 5 - 2) * 0.6;
             card.style.setProperty('--tilt', `${tilt}deg`);
             card.style.setProperty('--delay', `${Math.min(i * 35, 400)}ms`);
@@ -415,20 +565,32 @@
             card.setAttribute('aria-label', `View ${bird.title} full size`);
 
             card.innerHTML = `
-        <div class="specimen__frame">
-          <img src="${escapeHTML(bird.image)}" alt="${escapeHTML(bird.title)}" loading="lazy" />
+        <div class="specimen__frame is-loading">
+          <img src="${escapeHTML(bird.thumb || bird.image)}" alt="${escapeHTML(bird.title)}" loading="lazy" decoding="async" />
         </div>
         <p class="specimen__id">${catalogNumber(gameIndex, bird.id)}</p>
         <h3 class="specimen__title">${escapeHTML(bird.title)}</h3>
         ${bird.credit ? `<p class="specimen__credit"><span class="specimen__credit-name">${escapeHTML(bird.credit)}</span></p>` : ''}
       `;
 
-            const img = card.querySelector('img');
+            const frameEl = card.querySelector('.specimen__frame');
+            let img = card.querySelector('img');
+
+            const prev = prevCards.get(birdKey);
+            const prevSrc = prev && prev.img ? prev.img.getAttribute('src') : null;
+            if (doFlip && prev && prev.img && prev.img.complete && prev.img.naturalWidth
+                && (prevSrc === bird.thumb || prevSrc === bird.image)) {
+                img.replaceWith(prev.img);
+                img = prev.img;
+            }
+            trackImageLoad(frameEl, img);
+
             let imageFailed = false;
-            img.addEventListener('error', () => {
+            withFullFallback(img, bird, () => {
                 imageFailed = true;
-                img.closest('.specimen__frame').innerHTML = PLACEHOLDER_ICON;
-            }, { once: true });
+                frameEl.classList.remove('is-loading');
+                frameEl.innerHTML = PLACEHOLDER_ICON;
+            });
 
             card.style.cursor = 'zoom-in';
             const open = (e) => {
@@ -449,14 +611,62 @@
 
             boardGridEl.appendChild(card);
         });
+
+        if (doFlip) {
+            const cards = Array.from(boardGridEl.children);
+            const deltas = cards.map(card => {
+                const prev = prevCards.get(card.dataset.key);
+                return prev ? { dx: prev.left - card.offsetLeft, dy: prev.top - card.offsetTop } : null;
+            });
+            cards.forEach((card, i) => {
+                card.style.animationDuration = '0.001s, 3.5s, 1.8s';
+                card.style.animationDelay = '0s';
+
+                const d = deltas[i];
+                if (!d || (!d.dx && !d.dy)) return;
+                const { dx, dy } = d;
+                const tilt = (i % 5 - 2) * 0.6;
+                card.animate([
+                    { transform: `translate(${dx}px, ${dy}px) rotate(${tilt}deg)` },
+                    { transform: `translate(0px, 0px) rotate(${tilt}deg)` }
+                ], {
+                    duration: 520,
+                    delay: Math.min(i * 6, 140),
+                    easing: 'cubic-bezier(0.22, 0.85, 0.28, 1)',
+                    fill: 'backwards'
+                });
+            });
+        }
+
+        updateStickyBar();
     }
 
+    const LIGHTBOX_SWITCH_MS = 130;
+    const LIGHTBOX_CLOSE_MS = 170;
+    let lightboxTargetIndex = -1;
+    let lightboxSwitchToken = 0;
+    let lightboxClosing = false;
+
     function openLightboxAt(birds, accents, index) {
+        lightboxSwitchToken++;
+        lightboxClosing = false;
+        if (lightboxEl) lightboxEl.classList.remove('is-closing');
+        if (lightboxFigureEl) lightboxFigureEl.classList.remove('is-switching');
         lightboxTriggerEl = document.activeElement;
         lightboxBirds = birds;
         lightboxAccents = accents;
         lightboxIndex = index;
+        lightboxTargetIndex = index;
         renderLightboxCurrent();
+    }
+
+    function preloadLightboxNeighbours() {
+        const n = lightboxBirds.length;
+        if (n < 2) return;
+        [1, -1].forEach(offset => {
+            const b = lightboxBirds[(lightboxIndex + offset + n) % n];
+            if (b && b.image) { const im = new Image(); im.src = b.image; }
+        });
     }
 
     function renderLightboxCurrent() {
@@ -464,15 +674,50 @@
         const bird = lightboxBirds[lightboxIndex];
         const accent = lightboxAccents[lightboxIndex];
         openLightbox(bird, accent);
-        const hasMultiple = lightboxBirds.length > 1;
+        const n = lightboxBirds.length;
+        const hasMultiple = n > 1;
         if (lightboxPrevEl) lightboxPrevEl.hidden = !hasMultiple;
         if (lightboxNextEl) lightboxNextEl.hidden = !hasMultiple;
+        if (lightboxCounterEl) {
+            lightboxCounterEl.hidden = !hasMultiple;
+            lightboxCounterEl.textContent = hasMultiple ? `${lightboxIndex + 1} / ${n}` : '';
+        }
+        preloadLightboxNeighbours();
     }
 
     function showLightboxOffset(offset) {
-        if (!lightboxBirds.length) return;
-        lightboxIndex = (lightboxIndex + offset + lightboxBirds.length) % lightboxBirds.length;
-        renderLightboxCurrent();
+        const n = lightboxBirds.length;
+        if (!n || lightboxClosing) return;
+
+        const base = lightboxTargetIndex >= 0 ? lightboxTargetIndex : lightboxIndex;
+        lightboxTargetIndex = (base + offset + n) % n;
+
+        if (prefersReducedMotion() || !lightboxFigureEl) {
+            lightboxIndex = lightboxTargetIndex;
+            renderLightboxCurrent();
+            return;
+        }
+
+        const token = ++lightboxSwitchToken;
+        lightboxFigureEl.style.setProperty('--shift', `${offset > 0 ? -14 : 14}px`);
+        lightboxFigureEl.classList.add('is-switching');
+
+        setTimeout(() => {
+            if (token !== lightboxSwitchToken || lightboxEl.hidden || lightboxClosing) return;
+            lightboxIndex = lightboxTargetIndex;
+            renderLightboxCurrent();
+
+            const reveal = () => {
+                if (token === lightboxSwitchToken) lightboxFigureEl.classList.remove('is-switching');
+            };
+            if (lightboxImgEl.complete && lightboxImgEl.naturalWidth) {
+                requestAnimationFrame(reveal);
+            } else {
+                lightboxImgEl.addEventListener('load', reveal, { once: true });
+                lightboxImgEl.addEventListener('error', reveal, { once: true });
+                setTimeout(reveal, 700);
+            }
+        }, LIGHTBOX_SWITCH_MS);
     }
 
     function openLightbox(item, accent) {
@@ -503,17 +748,36 @@
     }
 
     function closeLightbox() {
-        if (!lightboxEl) return;
-        lightboxEl.hidden = true;
-        lightboxImgEl.removeAttribute('src');
-        document.body.style.overflow = '';
-        lightboxBirds = [];
-        lightboxAccents = [];
-        lightboxIndex = -1;
-        if (lightboxTriggerEl && document.contains(lightboxTriggerEl)) {
-            lightboxTriggerEl.focus();
+        if (!lightboxEl || lightboxEl.hidden || lightboxClosing) return;
+
+        const finalize = () => {
+            if (!lightboxClosing) return;
+            lightboxClosing = false;
+            lightboxEl.classList.remove('is-closing');
+            if (lightboxFigureEl) lightboxFigureEl.classList.remove('is-switching');
+            lightboxEl.hidden = true;
+            lightboxImgEl.removeAttribute('src');
+            document.body.style.overflow = '';
+            lightboxBirds = [];
+            lightboxAccents = [];
+            lightboxIndex = -1;
+            lightboxTargetIndex = -1;
+            if (lightboxTriggerEl && document.contains(lightboxTriggerEl)) {
+                lightboxTriggerEl.focus();
+            }
+            lightboxTriggerEl = null;
+            scheduleStickyUpdate();
+        };
+
+        lightboxSwitchToken++;
+        if (prefersReducedMotion()) {
+            lightboxClosing = true;
+            finalize();
+            return;
         }
-        lightboxTriggerEl = null;
+        lightboxClosing = true;
+        lightboxEl.classList.add('is-closing');
+        setTimeout(finalize, LIGHTBOX_CLOSE_MS);
     }
 
     if (lightboxEl) {
@@ -524,8 +788,26 @@
         if (lightboxPrevEl) lightboxPrevEl.addEventListener('click', () => showLightboxOffset(-1));
         if (lightboxNextEl) lightboxNextEl.addEventListener('click', () => showLightboxOffset(1));
 
+        let swipeX = 0, swipeY = 0, swipeActive = false;
+        lightboxEl.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) { swipeActive = false; return; }
+            swipeActive = true;
+            swipeX = e.touches[0].clientX;
+            swipeY = e.touches[0].clientY;
+        }, { passive: true });
+        lightboxEl.addEventListener('touchend', (e) => {
+            if (!swipeActive) return;
+            swipeActive = false;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - swipeX;
+            const dy = t.clientY - swipeY;
+            if (lightboxBirds.length > 1 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                showLightboxOffset(dx < 0 ? 1 : -1);
+            }
+        }, { passive: true });
+
         document.addEventListener('keydown', (e) => {
-            if (lightboxEl.hidden) return;
+            if (lightboxEl.hidden || lightboxClosing) return;
             if (e.key === 'Escape') { closeLightbox(); return; }
             if (e.key === 'ArrowLeft') { showLightboxOffset(-1); return; }
             if (e.key === 'ArrowRight') { showLightboxOffset(1); return; }
@@ -547,11 +829,103 @@
         });
     }
 
+    let pendingBoardRender = null;
+    let boardOpacity = 1;
+
+    function setBoardOpacity(value) {
+        const headerEl = boardTitleEl.parentElement;
+        boardOpacity = value === null ? 1 : value;
+        [headerEl, boardGridEl].forEach(el => {
+            if (!el) return;
+            el.style.transition = 'none';
+            el.style.opacity = value === null ? '' : String(value);
+        });
+    }
+
+    const easeInOutCubic = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const smoothstep = (a, b, x) => {
+        const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+        return t * t * (3 - 2 * t);
+    };
+
+    function glideToBoard(done) {
+        const boardEl = document.querySelector('.board');
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!boardEl || reduceMotion) {
+            if (boardEl) window.scrollTo({ top: boardEl.getBoundingClientRect().top + window.scrollY, behavior: 'instant' });
+            done();
+            return () => {};
+        }
+
+        const startY = window.scrollY;
+        const maxY = document.documentElement.scrollHeight - window.innerHeight;
+        const targetY = Math.max(0, Math.min(boardEl.getBoundingClientRect().top + startY, maxY));
+        const distance = targetY - startY;
+        const startOpacity = boardOpacity;
+
+        const duration = Math.abs(distance) < 2
+            ? 180
+            : Math.min(700, Math.max(380, 280 + Math.abs(distance) * 0.15));
+
+        const startedAt = performance.now();
+        let rafId = 0;
+        let finished = false;
+
+        const stopListening = () => {
+            ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(evt =>
+                window.removeEventListener(evt, interrupt));
+        };
+        function finish() {
+            if (finished) return;
+            finished = true;
+            cancelAnimationFrame(rafId);
+            stopListening();
+            done();
+        }
+        function interrupt() { finish(); }
+        ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(evt =>
+            window.addEventListener(evt, interrupt, { passive: true }));
+
+        function frame(now) {
+            if (finished) return;
+            const p = Math.min(1, (now - startedAt) / duration);
+            if (Math.abs(distance) >= 2) {
+                window.scrollTo({ top: startY + distance * easeInOutCubic(p), behavior: 'instant' });
+            }
+            setBoardOpacity(startOpacity * (1 - smoothstep(0, 0.9, p)));
+            if (p < 1) rafId = requestAnimationFrame(frame);
+            else finish();
+        }
+        rafId = requestAnimationFrame(frame);
+
+        return () => {
+            if (finished) return;
+            finished = true;
+            cancelAnimationFrame(rafId);
+            stopListening();
+        };
+    }
+
     function selectGame(gameId, options) {
         const opts = options || {};
+
+        if (pendingBoardRender) { pendingBoardRender(); pendingBoardRender = null; }
+
         activeGameId = gameId;
         renderSidebar();
-        renderBoard();
+
+        if (opts.scrollToBoard) {
+            pendingBoardRender = glideToBoard(() => {
+                pendingBoardRender = null;
+                setBoardOpacity(null);
+                boardGridEl.classList.add('board__grid--soft');
+                renderBoard();
+            });
+        } else {
+            setBoardOpacity(null);
+            boardGridEl.classList.remove('board__grid--soft');
+            renderBoard();
+        }
 
         if (opts.updateHash !== false) {
             const newHash = '#' + encodeURIComponent(gameId);
@@ -585,19 +959,45 @@
         requestAnimationFrame(tick);
     }
 
+    function whenLedgerReady(cb) {
+        const ledgerEl = document.querySelector('.ledger');
+        if (!ledgerEl || !('IntersectionObserver' in window)) { cb(); return; }
+
+        let fired = false;
+        const fire = () => {
+            if (fired) return;
+            fired = true;
+            const anims = ledgerEl.getAnimations
+                ? ledgerEl.getAnimations().filter(a => {
+                    const t = a.effect && a.effect.getComputedTiming();
+                    return t && isFinite(t.endTime);
+                })
+                : [];
+            if (!anims.length) { cb(); return; }
+            Promise.race([
+                Promise.all(anims.map(a => a.finished.catch(() => {}))),
+                new Promise(resolve => setTimeout(resolve, 2500))
+            ]).then(cb);
+        };
+
+        const io = new IntersectionObserver((entries) => {
+            if (entries.some(e => e.isIntersecting)) { io.disconnect(); fire(); }
+        }, { threshold: 0.4 });
+        io.observe(ledgerEl);
+    }
+
     function renderStats() {
         const totalBirds = gamesData.reduce((sum, g) => sum + g.birds.length, 0);
-        animateCount(statBirdsEl, totalBirds);
-        animateCount(statGamesEl, gamesData.length);
+        let totalCredits = 0;
+        gamesData.forEach(g => g.birds.forEach(bird => {
+            if ((bird.credit || '').trim()) totalCredits++;
+        }));
 
-        if (statContributorsEl) {
-            let totalCredits = 0;
-            gamesData.forEach(g => g.birds.forEach(bird => {
-                const name = (bird.credit || '').trim();
-                if (name) totalCredits++;
-            }));
-            animateCount(statContributorsEl, totalCredits);
-        }
+        whenLedgerReady(() => {
+            animateCount(statBirdsEl, totalBirds);
+            animateCount(statGamesEl, gamesData.length);
+            if (statContributorsEl) animateCount(statContributorsEl, totalCredits);
+        });
     }
 
     function escapeHTML(str) {
@@ -623,7 +1023,7 @@
             game.birds.forEach(bird => {
                 const date = (bird.date || '').trim();
                 if (!date) return;
-                items.push({ date, title: bird.title, image: bird.image, gameName: game.name });
+                items.push({ date, title: bird.title, image: bird.image, thumb: bird.thumb, gameName: game.name });
             });
         });
         return items.sort((a, b) =>
@@ -677,6 +1077,37 @@
         });
     }
 
+    const BIRB_LOG_CHUNK = 60;
+
+    function buildLogCard(bird, cardIndex, chunkIndex) {
+        const card = document.createElement('article');
+        card.className = 'log-card';
+        card.style.setProperty('--tilt', `${(cardIndex % 5 - 2) * 0.5}deg`);
+        card.style.setProperty('--delay', `${Math.min(chunkIndex * 30, 300)}ms`);
+        card.style.setProperty('--accent', LOG_ACCENTS[cardIndex % LOG_ACCENTS.length]);
+
+        const src = bird.thumb || bird.image;
+        const imgTag = src
+            ? `<img src="${escapeHTML(src)}" alt="${escapeHTML(bird.title)}" loading="lazy" decoding="async" />`
+            : PLACEHOLDER_ICON;
+
+        card.innerHTML = `
+            <div class="log-card__frame${src ? ' is-loading' : ''}">${imgTag}</div>
+            <h3 class="log-card__title">${escapeHTML(bird.title)}</h3>
+          `;
+
+        const imgEl = card.querySelector('.log-card__frame img');
+        if (imgEl) {
+            const frameEl = imgEl.closest('.log-card__frame');
+            trackImageLoad(frameEl, imgEl);
+            withFullFallback(imgEl, bird, () => {
+                frameEl.classList.remove('is-loading');
+                frameEl.innerHTML = PLACEHOLDER_ICON;
+            });
+        }
+        return card;
+    }
+
     function renderBirbLog(panelEl, items) {
         if (!panelEl) return;
         panelEl.innerHTML = '';
@@ -686,62 +1117,77 @@
             return;
         }
 
-        let cardIndex = 0;
-        groupBirbLogItems(items).forEach(dateGroup => {
-            const dateEl = document.createElement('div');
-            dateEl.className = 'logbook__date-group';
+        const groups = groupBirbLogItems(items);
+        const sentinel = document.createElement('div');
+        sentinel.className = 'logbook__sentinel';
+        sentinel.style.height = '1px';
+        sentinel.setAttribute('aria-hidden', 'true');
+        panelEl.appendChild(sentinel);
 
-            const dateHeading = document.createElement('h3');
-            dateHeading.className = 'logbook__date-heading';
-            dateHeading.textContent = formatLogDate(dateGroup.date);
-            dateEl.appendChild(dateHeading);
+        let di = 0, gi = 0, bi = 0, cardIndex = 0;
+        let dateEl = null, gridEl = null;
 
-            dateGroup.games.forEach(gameGroup => {
-                const gameEl = document.createElement('div');
-                gameEl.className = 'logbook__game-group';
+        function renderChunk(budget) {
+            let made = 0;
+            while (made < budget && di < groups.length) {
+                const dateGroup = groups[di];
+                const gameGroup = dateGroup.games[gi];
 
-                const gameHeading = document.createElement('h4');
-                gameHeading.className = 'logbook__game-heading';
-                gameHeading.textContent = gameGroup.gameName;
-                gameEl.appendChild(gameHeading);
+                if (!dateEl) {
+                    dateEl = document.createElement('div');
+                    dateEl.className = 'logbook__date-group';
+                    const dateHeading = document.createElement('h3');
+                    dateHeading.className = 'logbook__date-heading';
+                    dateHeading.textContent = formatLogDate(dateGroup.date);
+                    dateEl.appendChild(dateHeading);
+                    panelEl.insertBefore(dateEl, sentinel);
+                }
+                if (!gridEl) {
+                    const gameEl = document.createElement('div');
+                    gameEl.className = 'logbook__game-group';
+                    const gameHeading = document.createElement('h4');
+                    gameHeading.className = 'logbook__game-heading';
+                    gameHeading.textContent = gameGroup.gameName;
+                    gridEl = document.createElement('div');
+                    gridEl.className = 'logbook__bird-grid';
+                    gameEl.append(gameHeading, gridEl);
+                    dateEl.appendChild(gameEl);
+                }
 
-                const gridEl = document.createElement('div');
-                gridEl.className = 'logbook__bird-grid';
+                gridEl.appendChild(buildLogCard(gameGroup.birds[bi], cardIndex++, made));
+                made++;
+                bi++;
 
-                gameGroup.birds.forEach(bird => {
-                    const card = document.createElement('article');
-                    card.className = 'log-card';
-                    const tilt = (cardIndex % 5 - 2) * 0.5;
-                    card.style.setProperty('--tilt', `${tilt}deg`);
-                    card.style.setProperty('--delay', `${Math.min(cardIndex * 30, 300)}ms`);
-                    card.style.setProperty('--accent', LOG_ACCENTS[cardIndex % LOG_ACCENTS.length]);
-                    cardIndex++;
+                if (bi >= gameGroup.birds.length) {
+                    bi = 0; gi++; gridEl = null;
+                    if (gi >= dateGroup.games.length) { gi = 0; di++; dateEl = null; }
+                }
+            }
+            return di < groups.length;
+        }
 
-                    const imgTag = bird.image
-                        ? `<img src="${escapeHTML(bird.image)}" alt="${escapeHTML(bird.title)}" loading="lazy" />`
-                        : PLACEHOLDER_ICON;
+        if (!('IntersectionObserver' in window)) {
+            renderChunk(Infinity);
+            sentinel.remove();
+            return;
+        }
 
-                    card.innerHTML = `
-            <div class="log-card__frame">${imgTag}</div>
-            <h3 class="log-card__title">${escapeHTML(bird.title)}</h3>
-          `;
+        if (!renderChunk(BIRB_LOG_CHUNK)) {
+            sentinel.remove();
+            return;
+        }
 
-                    const imgEl = card.querySelector('.log-card__frame img');
-                    if (imgEl) {
-                        imgEl.addEventListener('error', () => {
-                            imgEl.closest('.log-card__frame').innerHTML = PLACEHOLDER_ICON;
-                        }, { once: true });
-                    }
-
-                    gridEl.appendChild(card);
-                });
-
-                gameEl.appendChild(gridEl);
-                dateEl.appendChild(gameEl);
-            });
-
-            panelEl.appendChild(dateEl);
-        });
+        const io = new IntersectionObserver((entries) => {
+            if (!entries.some(e => e.isIntersecting)) return;
+            if (renderChunk(BIRB_LOG_CHUNK)) {
+                io.unobserve(sentinel);
+                io.observe(sentinel);
+            } else {
+                io.disconnect();
+                sentinel.remove();
+            }
+        }, { root: panelEl, rootMargin: '0px 0px 600px 0px' });
+        io.observe(sentinel);
     }
 
     function parseDevText(text) {
@@ -859,8 +1305,18 @@
         });
     }
 
-    function renderLogbook() {
+    let birbLogReady = false;
+    let birbLogRendered = false;
+
+    function renderBirbLogIfNeeded() {
+        if (!birbLogReady || birbLogRendered || !logPanelBirdsEl || logPanelBirdsEl.hidden) return;
+        birbLogRendered = true;
         renderBirbLog(logPanelBirdsEl, buildBirbLogItems());
+    }
+
+    function renderLogbook() {
+        birbLogReady = true;
+        renderBirbLogIfNeeded();
         renderDevLog(logPanelDevEl, buildDevLogItems());
     }
 
@@ -875,6 +1331,7 @@
             logTabDevEl.classList.toggle('is-active', !showBirds);
             logTabBirdsEl.setAttribute('aria-selected', String(showBirds));
             logTabDevEl.setAttribute('aria-selected', String(!showBirds));
+            if (showBirds) renderBirbLogIfNeeded();
         }
 
         logTabBirdsEl.addEventListener('click', () => showTab('birds'));
@@ -1046,13 +1503,6 @@
             if (gameSearchEl) {
                 gameSearchEl.addEventListener('input', renderSidebar);
             }
-            if (boardSortEl) {
-                boardSortEl.value = sortMode;
-                boardSortEl.addEventListener('change', () => {
-                    sortMode = boardSortEl.value;
-                    renderBoard();
-                });
-            }
             if (gamesData.length) {
                 const hashId = safeDecode(location.hash.slice(1));
                 const startGame = gamesData.find(g => g.id === hashId) || gamesData[0];
@@ -1067,6 +1517,107 @@
         }
         renderLogbook();
         renderSmile();
+    }
+
+    function initSortDropdown() {
+        if (!boardSortEl || !boardSortLabelEl || !boardSortMenuEl) return;
+
+        const options = Array.from(boardSortMenuEl.querySelectorAll('[role="option"]'));
+        const currentEl = boardSortEl.querySelector('.board__sort-current');
+        const valueEl = boardSortEl.querySelector('.board__sort-value');
+        let activeIndex = -1;
+
+        // Invisible copies of every label keep the pill the same width whichever option is picked.
+        options.forEach(opt => {
+            const sizer = document.createElement('span');
+            sizer.className = 'board__sort-sizer';
+            sizer.setAttribute('aria-hidden', 'true');
+            sizer.textContent = opt.textContent.trim();
+            valueEl.appendChild(sizer);
+        });
+
+        const isOpen = () => boardSortLabelEl.classList.contains('is-open');
+
+        function markSelected(index) {
+            options.forEach((opt, n) => opt.setAttribute('aria-selected', String(n === index)));
+            if (options[index]) currentEl.textContent = options[index].textContent.trim();
+        }
+
+        function setActive(index) {
+            activeIndex = index;
+            options.forEach((opt, n) => opt.classList.toggle('is-active', n === index));
+            if (options[index]) boardSortMenuEl.setAttribute('aria-activedescendant', options[index].id);
+        }
+
+        function openMenu() {
+            if (isOpen()) return;
+            boardSortLabelEl.classList.add('is-open');
+            boardSortEl.setAttribute('aria-expanded', 'true');
+            setActive(Math.max(0, options.findIndex(opt => opt.dataset.value === sortMode)));
+            boardSortMenuEl.focus({ preventScroll: true });
+            if (document.activeElement !== boardSortMenuEl) {
+                requestAnimationFrame(() => boardSortMenuEl.focus({ preventScroll: true }));
+            }
+        }
+
+        function closeMenu(returnFocus) {
+            if (!isOpen()) return;
+            boardSortLabelEl.classList.remove('is-open');
+            boardSortEl.setAttribute('aria-expanded', 'false');
+            boardSortMenuEl.removeAttribute('aria-activedescendant');
+            options.forEach(opt => opt.classList.remove('is-active'));
+            if (returnFocus) boardSortEl.focus({ preventScroll: true });
+        }
+
+        function choose(index) {
+            const opt = options[index];
+            if (!opt) return;
+            const changed = opt.dataset.value !== sortMode;
+            markSelected(index);
+            closeMenu(true);
+            if (changed) {
+                sortMode = opt.dataset.value;
+                if (activeGameId) renderBoard({ flip: true });
+            }
+        }
+
+        markSelected(Math.max(0, options.findIndex(opt => opt.dataset.value === sortMode)));
+
+        boardSortLabelEl.addEventListener('click', (e) => {
+            if (boardSortMenuEl.contains(e.target)) return;
+            if (isOpen()) closeMenu(true); else openMenu();
+        });
+
+        boardSortEl.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                openMenu();
+            }
+        });
+
+        boardSortMenuEl.addEventListener('keydown', (e) => {
+            const last = options.length - 1;
+            switch (e.key) {
+                case 'ArrowDown': e.preventDefault(); setActive(activeIndex >= last ? 0 : activeIndex + 1); break;
+                case 'ArrowUp':   e.preventDefault(); setActive(activeIndex <= 0 ? last : activeIndex - 1); break;
+                case 'Home':      e.preventDefault(); setActive(0); break;
+                case 'End':       e.preventDefault(); setActive(last); break;
+                case 'Enter':
+                case ' ':         e.preventDefault(); choose(activeIndex); break;
+                case 'Escape':    e.preventDefault(); closeMenu(true); break;
+                case 'Tab':       closeMenu(true); break;   // focus returns to the button, then Tab moves on from there
+                default: break;
+            }
+        });
+
+        options.forEach((opt, i) => {
+            opt.addEventListener('pointermove', () => { if (activeIndex !== i) setActive(i); });
+            opt.addEventListener('click', () => choose(i));
+        });
+
+        document.addEventListener('pointerdown', (e) => {
+            if (isOpen() && !boardSortLabelEl.contains(e.target)) closeMenu(false);
+        });
     }
 
     function initScrollReveal() {
@@ -1137,6 +1688,7 @@
     }
 
     initInPageAnchors();
+    initSortDropdown();
     initScrollReveal();
     init();
     initAboutMe();
