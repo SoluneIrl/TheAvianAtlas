@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>The Avian Atlas</title>
     <meta name="description" content="I hope this little project of mine reflects both my love for birds and gaming." />
     <meta property="og:type" content="website" />
@@ -22,9 +22,11 @@
     <link rel="icon" href="Assets/Resources/Logo.png" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" as="font" type="font/woff2" href="https://fonts.gstatic.com/s/fraunces/v38/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeA.woff2" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Work+Sans:wght@400;500&family=Space+Mono:wght@400;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Work+Sans:wght@400;500&family=Space+Mono:wght@400;700&family=Caveat:wght@500;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Work+Sans:wght@400;500&family=Space+Mono:wght@400;700&family=Caveat:wght@500;700&display=swap"></noscript>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="preload" as="fetch" href="Data/birds.csv" crossorigin>
+    <script src="app.js" defer></script>
 </head>
 <body>
 
@@ -55,34 +57,33 @@
         </button>
         <audio id="bgMusic" src="Assets/Resources/Song.mp3" loop preload="none"></audio>
 
-        <div class="tag tag--cta" style="margin: 1rem 0 0;">
+        <div class="tag tag--cta">
             <span class="tag__hole"></span>
-            <a class="tag-cta__link" style="text-decoration: none;" href="#collection">
+            <a class="tag-cta__link" href="#collection">
                 Lets jump into it!
             </a>
         </div>
 
-        <dl class="ledger">
+        <div class="ledger">
             <p class="ledger__title">
                 <svg class="ledger__title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20V4M10 20V4M14 20V4M18 20V4M21 5L3 19"/></svg>
                 Field tally
             </p>
-            <div class="ledger__row">
-                <dt>Birbs spotted</dt>
-                <span class="ledger__dots" aria-hidden="true"></span>
-                <dd id="statBirds">&ndash;</dd>
-            </div>
-            <div class="ledger__row">
-                <dt>Games Explored</dt>
-                <span class="ledger__dots" aria-hidden="true"></span>
-                <dd id="statGames">&ndash;</dd>
-            </div>
-            <div class="ledger__row">
-                <dt>Community Sidekicks</dt>
-                <span class="ledger__dots" aria-hidden="true"></span>
-                <dd id="statContributors">&ndash;</dd>
-            </div>
-        </dl>
+            <dl class="ledger__list">
+                <div class="ledger__row">
+                    <dt>Birbs spotted</dt>
+                    <dd id="statBirds">&ndash;</dd>
+                </div>
+                <div class="ledger__row">
+                    <dt>Games Explored</dt>
+                    <dd id="statGames">&ndash;</dd>
+                </div>
+                <div class="ledger__row">
+                    <dt>Community Sidekicks</dt>
+                    <dd id="statContributors">&ndash;</dd>
+                </div>
+            </dl>
+        </div>
     </div>
 
     <div class="hero__visual">
@@ -99,9 +100,28 @@
 </div>
 
 <main class="collection" id="collection">
-    <nav class="sidebar" aria-label="Games">
+    <div class="game-picker" id="gamePicker">
+        <button type="button" class="game-picker__btn" id="gamePickerBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="gameSidebar">
+            <img class="game-picker__icon" src="Assets/Resources/List.svg" alt="" aria-hidden="true" />
+            <span class="game-picker__text">
+                <span class="game-picker__label">Switch game</span>
+                <span class="game-picker__name" id="gamePickerName">Choose a game</span>
+            </span>
+            <svg class="game-picker__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>
+        </button>
+    </div>
+
+    <nav class="sidebar" id="gameSidebar" aria-label="Games">
         <div class="sidebar__sticky">
-            <p class="sidebar__label">My Myriad of Games</p>
+            <div class="sheet-top" id="sheetTop">
+                <div class="sheet-grab" aria-hidden="true"><span></span></div>
+                <div class="sidebar__head">
+                    <p class="sidebar__label">My Myriad of Games</p>
+                    <button type="button" class="sheet-close" id="sheetClose" aria-label="Close game list">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+                    </button>
+                </div>
+            </div>
             <div class="sidebar__search-wrap">
                 <svg class="sidebar__search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 6C13.7614 6 16 8.23858 16 11M16.6588 16.6549L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z"/></svg>
                 <input
@@ -109,6 +129,8 @@
                         id="gameSearch"
                         class="sidebar__search"
                         placeholder="Search games…"
+                        enterkeyhint="go"
+                        autocomplete="off"
                         aria-label="Search games"
                 />
             </div>
@@ -142,6 +164,8 @@
         <div class="board__grid" id="boardGrid"></div>
     </section>
 </main>
+
+<div class="sheet-backdrop" id="sheetBackdrop" aria-hidden="true"></div>
 
 <div class="board-sticky" id="boardSticky" inert aria-hidden="true">
     <div class="board-sticky__inner">
@@ -266,7 +290,7 @@
 
             <figure class="scrap scrap--photo">
                 <span class="washi-tape washi-tape--top"></span>
-                <img class="scrap__img" src="Assets/Resources/Solune.png" alt="A photo of Solune" />
+                <img class="scrap__img" src="Assets/Resources/Solune.png" alt="A photo of Solune" loading="lazy" decoding="async" />
                 <figcaption class="about-me__caption">Probably out looking for birds!</figcaption>
             </figure>
         </div>
@@ -295,6 +319,5 @@
     </div>
 </section>
 
-<script src="app.js"></script>
 </body>
 </html>

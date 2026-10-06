@@ -35,15 +35,28 @@
     const boardStickyTitleEl = document.getElementById('boardStickyTitle');
     const boardStickyMetaEl  = document.getElementById('boardStickyMeta');
     const boardStickyTopEl   = document.getElementById('boardStickyTop');
-
-    const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
+    const sidebarEl       = document.getElementById('gameSidebar');
+    const pickerEl        = document.getElementById('gamePicker');
+    const pickerBtnEl     = document.getElementById('gamePickerBtn');
+    const pickerNameEl    = document.getElementById('gamePickerName');
+    const pickerCountEl   = document.getElementById('gamePickerCount');
+    const sheetBackdropEl = document.getElementById('sheetBackdrop');
+    const sheetCloseEl    = document.getElementById('sheetClose');
+    const sheetTopEl      = document.getElementById('sheetTop');
+    const mobileMQ        = window.matchMedia('(max-width: 780px)');
+    let sheetOpen = false;
+    const reducedMotionMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const prefersReducedMotion = () => reducedMotionMQ.matches;
+    const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+    const plainCollator = new Intl.Collator();
+    const compareStr = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+    const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
     const PLAY_ICON  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.4086 9.35258C23.5305 10.5065 23.5305 13.4935 21.4086 14.6474L8.59662 21.6145C6.53435 22.736 4 21.2763 4 18.9671L4 5.0329C4 2.72368 6.53435 1.26402 8.59661 2.38548L21.4086 9.35258Z"/></svg>';
     const PAUSE_ICON = '<svg viewBox="-1 0 8 8" fill="currentColor"><path d="M172,3605 C171.448,3605 171,3605.448 171,3606 L171,3612 C171,3612.552 171.448,3613 172,3613 C172.552,3613 173,3612.552 173,3612 L173,3606 C173,3605.448 172.552,3605 172,3605 M177,3606 L177,3612 C177,3612.552 176.552,3613 176,3613 C175.448,3613 175,3612.552 175,3612 L175,3606 C175,3605.448 175.448,3605 176,3605 C176.552,3605 177,3605.448 177,3606" transform="translate(-171,-3605)"/></svg>';
 
     if (heroEl && heroImgEl
         && window.matchMedia('(hover: hover) and (pointer: fine)').matches
-        && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        && !prefersReducedMotion()) {
         let parallaxRAF = null;
         heroEl.addEventListener('mousemove', (e) => {
             if (parallaxRAF) return;
@@ -66,9 +79,9 @@
         try { return decodeURIComponent(str); } catch (_) { return str; }
     }
 
-    function clickPoint(e) {
+    function clickPoint(e, targetEl) {
         if (e.detail === 0 && e.clientX === 0 && e.clientY === 0) {
-            const el = e.currentTarget || e.target;
+            const el = targetEl || e.currentTarget || e.target;
             if (el && el.getBoundingClientRect) {
                 const r = el.getBoundingClientRect();
                 return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
@@ -78,7 +91,7 @@
     }
 
     function spawnConfetti(x, y, count) {
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        if (prefersReducedMotion()) return;
         const rave = document.body.classList.contains('music-playing');
         const palette = rave
             ? ['#ff5c8a', '#ff9f43', '#ffd93d', '#6bcb77', '#4d96ff', '#a66bff']
@@ -110,7 +123,7 @@
 
     function triggerColorSplash(x, y) {
         if (!colorSplashEl) return;
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        if (prefersReducedMotion()) return;
 
         const xPct = (x / window.innerWidth) * 100;
         const yPct = (y / window.innerHeight) * 100;
@@ -173,7 +186,7 @@
     }
 
     const ACCENT_CYCLE = ['var(--color-accent-gold)', 'var(--color-accent-wine-bright)', 'var(--color-accent-umber)'];
-    const PLACEHOLDER_ICON = `<img src="Assets/Resources/Default.png" alt="Default Card Image"/>`
+    const PLACEHOLDER_ICON = `<img src="Assets/Resources/Default.png" alt=""/>`
     const USE_THUMBS = true;
     const GAMES_ROOT = 'Assets/Games';
     const THUMBS_ROOT = 'Assets/Thumbs';
@@ -205,16 +218,16 @@
         const arr = birds.slice();
         switch (mode) {
             case 'az':
-                arr.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base', numeric: true }));
+                arr.sort((a, b) => collator.compare(a.title, b.title));
                 break;
             case 'za':
-                arr.sort((a, b) => b.title.localeCompare(a.title, undefined, { sensitivity: 'base', numeric: true }));
+                arr.sort((a, b) => collator.compare(b.title, a.title));
                 break;
             case 'new':
-                arr.sort((a, b) => b.date.localeCompare(a.date));
+                arr.sort((a, b) => (!a.date - !b.date) || compareStr(b.date, a.date));
                 break;
             case 'old':
-                arr.sort((a, b) => a.date.localeCompare(b.date));
+                arr.sort((a, b) => (!a.date - !b.date) || compareStr(a.date, b.date));
                 break;
             default:
                 break;
@@ -257,7 +270,10 @@
                 field += char;
             }
         }
-        if (field !== '' || row.length) { row.push(field); rows.push(row); }
+        if (field !== '' || row.length) {
+            row.push(field);
+            if (row.some(f => f.trim() !== '')) rows.push(row);
+        }
 
         if (!rows.length) return [];
         const headers = rows[0].map(h => h.trim().toLowerCase());
@@ -291,6 +307,8 @@
         return resolveAssetPath(`Assets/Games/${gameName}`, image);
     }
 
+    const RESERVED_SLUGS = new Set(['top', 'collection', 'no-birds', 'logbook', 'smile', 'aboutme', 'about-me', 'lightbox']);
+
     function rowsToGames(rows) {
         const order = [];
         const byName = new Map();
@@ -300,7 +318,7 @@
             const base = slugify(name);
             let candidate = base;
             let suffix = 2;
-            while (usedSlugs.has(candidate)) {
+            while (usedSlugs.has(candidate) || RESERVED_SLUGS.has(candidate)) {
                 candidate = `${base}-${suffix++}`;
             }
             usedSlugs.add(candidate);
@@ -312,6 +330,7 @@
             if (!byName.has(gameName)) {
                 byName.set(gameName, {
                     id: uniqueSlug(gameName),
+                    index: order.length,
                     name: gameName,
                     birds: []
                 });
@@ -352,10 +371,15 @@
 
         const cRect = container.getBoundingClientRect();
         const iRect = item.getBoundingClientRect();
+        // The search box is sticky inside the scroller, so keep items clear of it.
+        const stickyEl = gameSearchEl && gameSearchEl.closest('.sidebar__search-wrap');
+        const stickyH = stickyEl && container.contains(stickyEl) && getComputedStyle(stickyEl).position === 'sticky'
+            ? stickyEl.offsetHeight : 0;
+        const topEdge = cRect.top + stickyH;
         let delta = 0;
-        if (iRect.top < cRect.top) delta = iRect.top - cRect.top;
+        if (iRect.top < topEdge) delta = iRect.top - topEdge;
         else if (iRect.bottom > cRect.bottom) delta = iRect.bottom - cRect.bottom;
-        if (delta) container.scrollBy({ top: delta, behavior: 'smooth' });
+        if (delta) container.scrollBy({ top: delta, behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
     }
 
     let indicatorPlaced = false;
@@ -379,93 +403,165 @@
         indicatorPlaced = true;
     }
 
-    window.addEventListener('resize', () => positionSidebarIndicator(true));
-    if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => positionSidebarIndicator(true));
+    function updateListFades() {
+        const el = gameListEl;
+        const overflowing = el.scrollHeight > el.clientHeight + 1;
+        el.classList.toggle('has-fade-top', overflowing && el.scrollTop > 1);
+        el.classList.toggle('has-fade-bottom', overflowing && el.scrollTop + el.clientHeight < el.scrollHeight - 1);
     }
+    gameListEl.addEventListener('scroll', updateListFades, { passive: true });
+
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => { positionSidebarIndicator(true); updateListFades(); });
+    }
+
+    const COMBINING_MARKS = /[\u0300-\u036f]/;
+    function foldWithMap(str) {
+        let folded = '';
+        const map = [];
+        for (let i = 0; i < str.length; i++) {
+            const piece = str[i].normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            for (let k = 0; k < piece.length; k++) map.push(i);
+            folded += piece;
+        }
+        return { folded, map };
+    }
+    const foldText = str => foldWithMap(str).folded;
 
     function highlightMatch(name, query) {
         if (!query) return escapeHTML(name);
-        const lower = name.toLowerCase();
+        const { folded, map } = foldWithMap(name);
         let out = '';
         let pos = 0;
+        let from = 0;
         let idx;
-        while ((idx = lower.indexOf(query, pos)) !== -1) {
-            out += escapeHTML(name.slice(pos, idx))
-                + '<mark class="game-btn__match">' + escapeHTML(name.slice(idx, idx + query.length)) + '</mark>';
-            pos = idx + query.length;
+        while ((idx = folded.indexOf(query, from)) !== -1) {
+            from = idx + query.length;
+            const start = map[idx];
+            let end = map[idx + query.length - 1] + 1;
+            while (end < name.length && COMBINING_MARKS.test(name[end])) end++;
+            if (start < pos) continue;
+            out += escapeHTML(name.slice(pos, start))
+                + '<mark class="game-btn__match">' + escapeHTML(name.slice(start, end)) + '</mark>';
+            pos = end;
         }
         return out + escapeHTML(name.slice(pos));
     }
 
-    function renderSidebar() {
+    const sidebarItems = new Map();
+
+    function renderSidebar(opts) {
+        const fromSearch = !!(opts && opts.fromSearch);
+        const hadSearchFocus = document.activeElement === gameSearchEl;
         const rawQuery = (gameSearchEl?.value || '').trim();
-        const query = rawQuery.toLowerCase();
+        const query = foldText(rawQuery);
         const visibleGames = query
-            ? gamesData.filter(g => g.name.toLowerCase().includes(query))
+            ? gamesData.filter(g => foldText(g.name).includes(query))
             : gamesData;
 
         gameListEl.innerHTML = '';
+        sidebarItems.clear();
 
         if (!visibleGames.length) {
-            const empty = document.createElement('p');
+            const empty = document.createElement('li');
             empty.className = 'game-list__empty';
-            empty.textContent = `No games match “${gameSearchEl.value.trim()}”.`;
+            empty.textContent = rawQuery ? `No games match \u201c${rawQuery}\u201d.` : 'No games logged yet.';
             gameListEl.appendChild(empty);
             gameListEl.style.setProperty('--ind-o', '0');
             indicatorPlaced = false;
+            updateListFades();
+            if (hadSearchFocus && document.activeElement !== gameSearchEl) gameSearchEl.focus({ preventScroll: true });
             return;
         }
 
+        const fragment = document.createDocumentFragment();
+        let activeLi = null;
+
         visibleGames.forEach(game => {
-            const i = gamesData.indexOf(game);
             const isActive = game.id === activeGameId;
 
             const li = document.createElement('li');
             li.className = 'game-item' + (isActive ? ' active' : '');
+            li.dataset.gameId = game.id;
 
             const btn = document.createElement('button');
             btn.className = 'game-btn';
             btn.type = 'button';
-            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
             if (isActive) btn.setAttribute('aria-current', 'true');
             btn.innerHTML = `
-        <span class="game-btn__index">${String(i + 1).padStart(2, '0')}</span>
+        <span class="game-btn__index">${String(game.index + 1).padStart(2, '0')}</span>
         <span class="game-btn__name">${highlightMatch(game.name, query)}</span>
         <span class="game-btn__count">${game.birds.length}</span>
       `;
-            btn.addEventListener('click', (e) => {
-                const pt = clickPoint(e);
-                spawnConfetti(pt.x, pt.y);
-                selectGame(game.id, { scrollToBoard: true });
-            });
 
             li.appendChild(btn);
-            gameListEl.appendChild(li);
-
-            if (isActive) {
-                requestAnimationFrame(() => scrollItemIntoListView(li));
-            }
+            fragment.appendChild(li);
+            sidebarItems.set(game.id, li);
+            if (isActive) activeLi = li;
         });
 
-        positionSidebarIndicator(false);
+        gameListEl.appendChild(fragment);
+        if (fromSearch) {
+            const scroller = gameListEl.closest('.sidebar__sticky');
+            if (scroller) scroller.scrollTop = 0;
+            gameListEl.scrollTop = 0;
+        } else if (activeLi) {
+            requestAnimationFrame(() => scrollItemIntoListView(activeLi));
+        }
+        positionSidebarIndicator(fromSearch);
+        updateListFades();
+        if (hadSearchFocus && document.activeElement !== gameSearchEl) gameSearchEl.focus({ preventScroll: true });
     }
+
+    function updateSidebarActive() {
+        let activeLi = null;
+        sidebarItems.forEach((li, id) => {
+            const isActive = id === activeGameId;
+            if (isActive) activeLi = li;
+            if (li.classList.contains('active') === isActive) return;
+            li.classList.toggle('active', isActive);
+            const btn = li.firstElementChild;
+            if (isActive) btn.setAttribute('aria-current', 'true');
+            else btn.removeAttribute('aria-current');
+        });
+        if (activeLi) requestAnimationFrame(() => scrollItemIntoListView(activeLi));
+        positionSidebarIndicator(false);
+
+        const activeGame = gamesData.find(g => g.id === activeGameId);
+        if (activeGame && pickerNameEl) {
+            pickerNameEl.textContent = activeGame.name;
+            if (pickerCountEl) pickerCountEl.textContent = activeGame.birds.length;
+        }
+    }
+
+    gameListEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('.game-btn');
+        const li = btn && btn.closest('.game-item');
+        if (!li || !gameListEl.contains(li)) return;
+        const pt = clickPoint(e, btn);
+        spawnConfetti(pt.x, pt.y);
+        selectGame(li.dataset.gameId, { scrollToBoard: true });
+    });
 
     function setStickyBarText(title, meta) {
         if (boardStickyTitleEl) boardStickyTitleEl.textContent = title;
         if (boardStickyMetaEl) boardStickyMetaEl.textContent = meta;
     }
 
+    const boardSectionEl = document.querySelector('.board');
+    const boardHeaderEl  = boardTitleEl.parentElement;
+    let stickyVisible = null;
+
     function updateStickyBar() {
         if (!boardStickyEl) return;
-        const boardEl = document.querySelector('.board');
-        const headerEl = boardTitleEl.parentElement;
         let show = false;
-        if (boardEl && headerEl && activeGameId) {
-            const headerRect = headerEl.getBoundingClientRect();
-            const boardRect = boardEl.getBoundingClientRect();
+        if (boardSectionEl && boardHeaderEl && activeGameId) {
+            const headerRect = boardHeaderEl.getBoundingClientRect();
+            const boardRect = boardSectionEl.getBoundingClientRect();
             show = headerRect.bottom < 0 && boardRect.bottom > 160;
         }
+        if (show === stickyVisible) return;
+        stickyVisible = show;
         boardStickyEl.classList.toggle('is-visible', show);
         if (show) {
             boardStickyEl.removeAttribute('inert');
@@ -482,15 +578,59 @@
         stickyRAF = requestAnimationFrame(() => { stickyRAF = 0; updateStickyBar(); });
     }
     window.addEventListener('scroll', scheduleStickyUpdate, { passive: true });
-    window.addEventListener('resize', scheduleStickyUpdate);
+
+    let resizeRAF = 0;
+    window.addEventListener('resize', () => {
+        if (resizeRAF) return;
+        resizeRAF = requestAnimationFrame(() => {
+            resizeRAF = 0;
+            positionSidebarIndicator(true);
+            updateListFades();
+            updateStickyBar();
+        });
+    });
 
     if (boardStickyTopEl) {
         boardStickyTopEl.addEventListener('click', () => {
-            const boardEl = document.querySelector('.board');
-            if (!boardEl) return;
-            window.scrollTo({ top: boardEl.getBoundingClientRect().top + window.scrollY });
+            if (!boardSectionEl) return;
+            window.scrollTo({ top: boardSectionEl.getBoundingClientRect().top + window.scrollY });
         });
     }
+
+    let boardDisplayBirds = [];
+    let boardDisplayAccents = [];
+
+    function openCard(card, e) {
+        if (!card || card.dataset.failed) return;
+        const i = Number(card.dataset.i);
+        if (!boardDisplayBirds[i]) return;
+        const rect = card.getBoundingClientRect();
+        const x = (e && typeof e.clientX === 'number') ? e.clientX : rect.left + rect.width / 2;
+        const y = (e && typeof e.clientY === 'number') ? e.clientY : rect.top + rect.height / 2;
+        spawnConfetti(x, y);
+        const birds = [], accents = [];
+        let startAt = 0;
+        Array.from(boardGridEl.children).forEach(c => {
+            const ci = Number(c.dataset.i);
+            if (c.dataset.failed || !boardDisplayBirds[ci]) return;
+            if (ci === i) startAt = birds.length;
+            birds.push(boardDisplayBirds[ci]);
+            accents.push(boardDisplayAccents[ci]);
+        });
+        openLightboxAt(birds, accents, startAt);
+    }
+
+    boardGridEl.addEventListener('click', (e) => {
+        const card = e.target.closest('.specimen');
+        if (card && boardGridEl.contains(card)) openCard(card, e);
+    });
+    boardGridEl.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const card = e.target.closest('.specimen');
+        if (!card || !boardGridEl.contains(card)) return;
+        e.preventDefault();
+        openCard(card);
+    });
 
     function trackImageLoad(frameEl, img) {
         if (!frameEl || !img) return;
@@ -509,7 +649,7 @@
             boardMetaEl.textContent = '';
             setStickyBarText('', '');
             if (boardSortLabelEl) boardSortLabelEl.hidden = true;
-            boardGridEl.innerHTML = `<div class="board__empty">Choose a game from the list on the left to see what I've spotted so far.</div>`;
+            boardGridEl.innerHTML = `<div class="board__empty">Choose a game from the list to see what I've spotted so far.</div>`;
             updateStickyBar();
             return;
         }
@@ -549,17 +689,20 @@
         boardGridEl.innerHTML = '';
         const displayBirds = sortBirds(game.birds, sortMode);
         const gameAccents = displayBirds.map((_, i) => ACCENT_CYCLE[(i + gameIndex) % ACCENT_CYCLE.length]);
+        boardDisplayBirds = displayBirds;
+        boardDisplayAccents = gameAccents;
 
+        const fragment = document.createDocumentFragment();
         displayBirds.forEach((bird, i) => {
             const birdKey = String(bird.key);
             const card = document.createElement('article');
             card.className = 'specimen';
             card.dataset.key = birdKey;
+            card.dataset.i = String(i);
             const tilt = (i % 5 - 2) * 0.6;
             card.style.setProperty('--tilt', `${tilt}deg`);
             card.style.setProperty('--delay', `${Math.min(i * 35, 400)}ms`);
-            const accent = gameAccents[i];
-            card.style.setProperty('--accent', accent);
+            card.style.setProperty('--accent', gameAccents[i]);
             card.tabIndex = 0;
             card.setAttribute('role', 'button');
             card.setAttribute('aria-label', `View ${bird.title} full size`);
@@ -585,32 +728,16 @@
             }
             trackImageLoad(frameEl, img);
 
-            let imageFailed = false;
             withFullFallback(img, bird, () => {
-                imageFailed = true;
+                card.dataset.failed = '1';
                 frameEl.classList.remove('is-loading');
                 frameEl.innerHTML = PLACEHOLDER_ICON;
             });
 
             card.style.cursor = 'zoom-in';
-            const open = (e) => {
-                if (imageFailed) return;
-                const rect = card.getBoundingClientRect();
-                const x = (e && typeof e.clientX === 'number') ? e.clientX : rect.left + rect.width / 2;
-                const y = (e && typeof e.clientY === 'number') ? e.clientY : rect.top + rect.height / 2;
-                spawnConfetti(x, y);
-                openLightboxAt(displayBirds, gameAccents, i);
-            };
-            card.addEventListener('click', open);
-            card.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    open();
-                }
-            });
-
-            boardGridEl.appendChild(card);
+            fragment.appendChild(card);
         });
+        boardGridEl.appendChild(fragment);
 
         if (doFlip) {
             const cards = Array.from(boardGridEl.children);
@@ -850,7 +977,7 @@
 
     function glideToBoard(done) {
         const boardEl = document.querySelector('.board');
-        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const reduceMotion = prefersReducedMotion();
         if (!boardEl || reduceMotion) {
             if (boardEl) window.scrollTo({ top: boardEl.getBoundingClientRect().top + window.scrollY, behavior: 'instant' });
             done();
@@ -906,13 +1033,116 @@
         };
     }
 
+    function syncSheetA11y() {
+        if (!sidebarEl) return;
+        const mobile = mobileMQ.matches;
+        sidebarEl.toggleAttribute('inert', mobile && !sheetOpen);
+        if (mobile) {
+            sidebarEl.setAttribute('role', 'dialog');
+            sidebarEl.setAttribute('aria-modal', 'true');
+            if (sheetOpen) sidebarEl.removeAttribute('aria-hidden');
+            else sidebarEl.setAttribute('aria-hidden', 'true');
+        } else {
+            sidebarEl.removeAttribute('role');
+            sidebarEl.removeAttribute('aria-modal');
+            sidebarEl.removeAttribute('aria-hidden');
+        }
+    }
+
+    function centerActiveInList() {
+        const li = gameListEl.querySelector('.game-item.active');
+        if (!li) return;
+        gameListEl.scrollTop = Math.max(0, li.offsetTop - (gameListEl.clientHeight - li.offsetHeight) / 2);
+    }
+
+    function openSheet() {
+        if (!sidebarEl || !mobileMQ.matches || sheetOpen) return;
+        sheetOpen = true;
+        syncSheetA11y();
+        document.documentElement.classList.add('sheet-open');
+        sidebarEl.classList.add('is-open');
+        pickerBtnEl.setAttribute('aria-expanded', 'true');
+        positionSidebarIndicator(true);
+        centerActiveInList();
+        updateListFades();
+        if (sheetCloseEl) sheetCloseEl.focus({ preventScroll: true });
+    }
+
+    function closeSheet(opts) {
+        if (!sheetOpen) return;
+        sheetOpen = false;
+        document.documentElement.classList.remove('sheet-open');
+        sidebarEl.classList.remove('is-open');
+        pickerBtnEl.setAttribute('aria-expanded', 'false');
+        if (!opts || opts.restoreFocus !== false) pickerBtnEl.focus({ preventScroll: true });
+        syncSheetA11y();
+    }
+
+    function initGamePicker() {
+        if (!sidebarEl || !pickerBtnEl) return;
+        syncSheetA11y();
+
+        pickerBtnEl.addEventListener('click', () => (sheetOpen ? closeSheet() : openSheet()));
+        if (sheetCloseEl) sheetCloseEl.addEventListener('click', () => closeSheet());
+        if (sheetBackdropEl) sheetBackdropEl.addEventListener('click', () => closeSheet());
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && sheetOpen) closeSheet();
+        });
+
+        const onBreakpoint = () => {
+            if (!mobileMQ.matches && sheetOpen) closeSheet({ restoreFocus: false });
+            syncSheetA11y();
+        };
+        if (mobileMQ.addEventListener) mobileMQ.addEventListener('change', onBreakpoint);
+        else mobileMQ.addListener(onBreakpoint);
+
+        if (window.visualViewport) {
+            const vv = window.visualViewport;
+            const onViewport = () => {
+                const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+                sidebarEl.style.setProperty('--kb', kb + 'px');
+                sidebarEl.style.setProperty('--vvh', vv.height + 'px');
+            };
+            vv.addEventListener('resize', onViewport);
+            vv.addEventListener('scroll', onViewport);
+        }
+
+        // Drag the handle / title row downwards to dismiss.
+        if (sheetTopEl) {
+            let startY = null, dy = 0;
+            sheetTopEl.addEventListener('pointerdown', (e) => {
+                if (!sheetOpen || e.target.closest('button')) return;
+                startY = e.clientY;
+                dy = 0;
+                sheetTopEl.setPointerCapture(e.pointerId);
+                sidebarEl.style.transition = 'none';
+            });
+            sheetTopEl.addEventListener('pointermove', (e) => {
+                if (startY === null) return;
+                dy = Math.max(0, e.clientY - startY);
+                sidebarEl.style.transform = `translateY(${dy}px)`;
+            });
+            const endDrag = () => {
+                if (startY === null) return;
+                startY = null;
+                sidebarEl.style.transition = '';
+                sidebarEl.style.transform = '';
+                if (dy > 90) closeSheet();
+            };
+            sheetTopEl.addEventListener('pointerup', endDrag);
+            sheetTopEl.addEventListener('pointercancel', endDrag);
+        }
+    }
+    initGamePicker();
+
     function selectGame(gameId, options) {
         const opts = options || {};
+        closeSheet({ restoreFocus: false });
 
         if (pendingBoardRender) { pendingBoardRender(); pendingBoardRender = null; }
 
         activeGameId = gameId;
-        renderSidebar();
+        updateSidebarActive();
 
         if (opts.scrollToBoard) {
             pendingBoardRender = glideToBoard(() => {
@@ -944,7 +1174,7 @@
 
     function animateCount(el, target, duration = 900) {
         if (!el) return;
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        if (prefersReducedMotion()) {
             el.textContent = target;
             return;
         }
@@ -988,10 +1218,12 @@
 
     function renderStats() {
         const totalBirds = gamesData.reduce((sum, g) => sum + g.birds.length, 0);
-        let totalCredits = 0;
+        const contributors = new Set();
         gamesData.forEach(g => g.birds.forEach(bird => {
-            if ((bird.credit || '').trim()) totalCredits++;
+            const name = (bird.credit || '').trim().toLowerCase();
+            if (name) contributors.add(name);
         }));
+        const totalCredits = contributors.size;
 
         whenLedgerReady(() => {
             animateCount(statBirdsEl, totalBirds);
@@ -1001,9 +1233,7 @@
     }
 
     function escapeHTML(str) {
-        const div = document.createElement('div');
-        div.textContent = String(str ?? '');
-        return div.innerHTML;
+        return String(str ?? '').replace(/[&<>"']/g, ch => HTML_ESCAPES[ch]);
     }
 
     const LOG_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1027,9 +1257,9 @@
             });
         });
         return items.sort((a, b) =>
-            b.date.localeCompare(a.date) ||
-            a.gameName.localeCompare(b.gameName) ||
-            a.title.localeCompare(b.title)
+            compareStr(b.date, a.date) ||
+            plainCollator.compare(a.gameName, b.gameName) ||
+            plainCollator.compare(a.title, b.title)
         );
     }
 
@@ -1048,7 +1278,7 @@
                     .filter(Boolean)
             }))
             .filter(item => item.date || item.text)
-            .sort((a, b) => a.date.localeCompare(b.date));
+            .sort((a, b) => compareStr(a.date, b.date));
     }
 
     function groupBirbLogItems(items) {
@@ -1251,7 +1481,7 @@
             entry.innerHTML = `
         <p class="dev-entry__date">${escapeHTML(formatLogDate(item.date))}</p>
         <div class="dev-entry__text">${devTextToHTML(item.text)}</div>
-        ${item.images.length ? `<div class="dev-entry__images" style="--n:${item.images.length}">${item.images.map(src => `<div class="dev-entry__frame"><img src="${escapeHTML(src)}" alt="" loading="lazy" /></div>`).join('')}</div>` : ''}
+        ${item.images.length ? `<div class="dev-entry__images" style="--n:${item.images.length}">${item.images.map(src => `<div class="dev-entry__frame"><img src="${escapeHTML(src)}" alt="" loading="lazy" decoding="async" /></div>`).join('')}</div>` : ''}
       `;
 
             entry.querySelectorAll('.dev-entry__frame').forEach(frameEl => {
@@ -1341,10 +1571,14 @@
     function initNoBirds() {
         const listEl = document.getElementById('noBirdsList');
         if (!listEl) return;
-        if (!NO_BIRDS_GAMES.length) return;
+        const sectionEl = document.getElementById('no-birds');
+        if (!NO_BIRDS_GAMES.length) {
+            if (sectionEl) sectionEl.hidden = true;
+            return;
+        }
 
         const sortedGames = [...NO_BIRDS_GAMES].sort((a, b) =>
-            (a || '').trim().localeCompare((b || '').trim(), undefined, { sensitivity: 'base' })
+            collator.compare((a || '').trim(), (b || '').trim())
         );
 
         listEl.innerHTML = '';
@@ -1492,31 +1726,83 @@
         sectionEl.hidden = !(logbookEl && !logbookEl.hidden);
     }
 
+    let secretOpened = false;
+    let secretDataReady = false;
+    let secretRendered = false;
+
+    function renderSecretSections() {
+        if (secretRendered || !secretOpened || !secretDataReady) return;
+        secretRendered = true;
+        renderLogbook();
+        renderSmile();
+    }
+
     async function init() {
         renderBoardSkeleton();
-        const [, birdsResult] = await Promise.allSettled([loadDevLog(), loadBirds(), loadNoBirds(), loadSmile()]);
-        initNoBirds();
 
-        if (birdsResult.status === 'fulfilled') {
+        const birdsLoad   = loadBirds();
+        const devLoad     = loadDevLog();
+        const noBirdsLoad = loadNoBirds();
+        const smileLoad   = loadSmile();
+
+        noBirdsLoad.then(initNoBirds);
+
+        let birdsOk = true;
+        try {
+            await birdsLoad;
+        } catch (err) {
+            birdsOk = false;
+            console.error(err);
+        }
+
+        if (birdsOk) {
             renderStats();
             renderSidebar();
             if (gameSearchEl) {
-                gameSearchEl.addEventListener('input', renderSidebar);
+                gameSearchEl.addEventListener('input', () => renderSidebar({ fromSearch: true }));
+                gameSearchEl.addEventListener('keydown', (e) => {
+                    if (e.isComposing) return;
+                    if (e.key === 'Escape' && gameSearchEl.value) {
+                        e.preventDefault();
+                        gameSearchEl.value = '';
+                        renderSidebar({ fromSearch: true });
+                    } else if (e.key === 'Enter') {
+                        const firstBtn = gameListEl.querySelector('.game-item .game-btn');
+                        if (!firstBtn) return;
+                        e.preventDefault();
+                        const gameId = firstBtn.closest('.game-item').dataset.gameId;
+                        const r = firstBtn.getBoundingClientRect();
+                        // Deferred so this same keydown can't interrupt the scroll glide.
+                        setTimeout(() => {
+                            spawnConfetti(r.left + r.width / 2, r.top + r.height / 2);
+                            selectGame(gameId, { scrollToBoard: true });
+                        }, 0);
+                    }
+                });
             }
-            if (gamesData.length) {
+            if (!gamesData.length) {
+                boardTitleEl.textContent = 'No birds logged yet';
+                boardMetaEl.textContent = '';
+                boardGridEl.innerHTML = `<div class="board__empty">Nothing here yet, check back soon!</div>`;
+                if (boardSortLabelEl) boardSortLabelEl.hidden = true;
+            } else {
                 const hashId = safeDecode(location.hash.slice(1));
                 const startGame = gamesData.find(g => g.id === hashId) || gamesData[0];
                 selectGame(startGame.id, { updateHash: false });
             }
         } else {
-            console.error(birdsResult.reason);
+            if (location.protocol !== 'file:') {
+                fileNoticeEl.textContent = 'Something went wrong loading the bird collection. Please check your connection and try refreshing the page.';
+            }
             fileNoticeEl.hidden = false;
             boardTitleEl.textContent = 'Couldn\u2019t load your collection';
             boardMetaEl.textContent = '';
             boardGridEl.innerHTML = '';
         }
-        renderLogbook();
-        renderSmile();
+
+        await Promise.all([devLoad, smileLoad]);   // both swallow their own errors
+        secretDataReady = true;
+        renderSecretSections();
     }
 
     function initSortDropdown() {
@@ -1623,7 +1909,7 @@
     function initScrollReveal() {
         const targets = document.querySelectorAll('.reveal-on-scroll');
         if (!targets.length) return;
-        if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        if (!('IntersectionObserver' in window) || prefersReducedMotion()) {
             targets.forEach(el => el.classList.add('is-visible'));
             return;
         }
@@ -1664,7 +1950,9 @@
             toggleEl.setAttribute('aria-expanded', String(opening));
 
             if (opening) {
-                sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                secretOpened = true;
+                renderSecretSections();
+                sectionEl.scrollIntoView({ behavior: prefersReducedMotion() ? 'instant' : 'smooth', block: 'start' });
                 const pt = clickPoint(e);
                 spawnConfetti(pt.x, pt.y);
             }
