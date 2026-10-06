@@ -352,6 +352,17 @@
         return order.map(name => byName.get(name));
     }
 
+    const NEW_BIRD_DAYS = 7;
+    function isNewBird(bird) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((bird && bird.date) || '');
+        if (!m) return false;
+        const spotted = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const days = Math.round((today - spotted) / 86400000);
+        return days >= -1 && days < NEW_BIRD_DAYS;
+    }
+
     function catalogNumber(gameIndex, birdId) {
         const g = String(gameIndex + 1).padStart(2, '0');
         const b = String(birdId).padStart(3, '0');
@@ -371,7 +382,6 @@
 
         const cRect = container.getBoundingClientRect();
         const iRect = item.getBoundingClientRect();
-        // The search box is sticky inside the scroller, so keep items clear of it.
         const stickyEl = gameSearchEl && gameSearchEl.closest('.sidebar__search-wrap');
         const stickyH = stickyEl && container.contains(stickyEl) && getComputedStyle(stickyEl).position === 'sticky'
             ? stickyEl.offsetHeight : 0;
@@ -708,6 +718,7 @@
             card.setAttribute('aria-label', `View ${bird.title} full size`);
 
             card.innerHTML = `
+        ${isNewBird(bird) ? '<span class="specimen__new"><span class="specimen__new-band">NEW</span></span>' : ''}
         <div class="specimen__frame is-loading">
           <img src="${escapeHTML(bird.thumb || bird.image)}" alt="${escapeHTML(bird.title)}" loading="lazy" decoding="async" />
         </div>
@@ -1107,7 +1118,6 @@
             vv.addEventListener('scroll', onViewport);
         }
 
-        // Drag the handle / title row downwards to dismiss.
         if (sheetTopEl) {
             let startY = null, dy = 0;
             sheetTopEl.addEventListener('pointerdown', (e) => {
@@ -1800,7 +1810,7 @@
             boardGridEl.innerHTML = '';
         }
 
-        await Promise.all([devLoad, smileLoad]);   // both swallow their own errors
+        await Promise.all([devLoad, smileLoad]);
         secretDataReady = true;
         renderSecretSections();
     }
