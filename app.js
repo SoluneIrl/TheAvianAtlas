@@ -610,21 +610,41 @@
     let boardDisplayBirds = [];
     let boardDisplayAccents = [];
 
+    const BOARD_BATCH_SIZE = 48;
+    const BOARD_LOAD_MARGIN = '800px 0px';
+    const boardSentinelEl = document.createElement('div');
+    boardSentinelEl.className = 'board__sentinel';
+    boardSentinelEl.setAttribute('aria-hidden', 'true');
+    boardSentinelEl.style.cssText = 'height:1px;width:100%;flex:none;pointer-events:none;';
+    boardSentinelEl.hidden = true;
+    boardGridEl.after(boardSentinelEl);
+    let boardObserver = null;
+
+    function stopBoardBatching() {
+        if (boardObserver) { boardObserver.disconnect(); boardObserver = null; }
+        boardSentinelEl.hidden = true;
+    }
+
     function openCard(card, e) {
         if (!card || card.dataset.failed) return;
         const i = Number(card.dataset.i);
         if (!boardDisplayBirds[i]) return;
+        const cardImg = card.querySelector('.specimen__frame img');
+        if (cardImg && cardImg.naturalWidth && cardImg.naturalHeight) {
+            boardDisplayBirds[i].ratio = cardImg.naturalWidth / cardImg.naturalHeight;
+        }
         const rect = card.getBoundingClientRect();
         const x = (e && typeof e.clientX === 'number') ? e.clientX : rect.left + rect.width / 2;
         const y = (e && typeof e.clientY === 'number') ? e.clientY : rect.top + rect.height / 2;
         spawnConfetti(x, y);
+        const failed = new Set();
+        boardGridEl.querySelectorAll('.specimen[data-failed]').forEach(c => failed.add(Number(c.dataset.i)));
         const birds = [], accents = [];
         let startAt = 0;
-        Array.from(boardGridEl.children).forEach(c => {
-            const ci = Number(c.dataset.i);
-            if (c.dataset.failed || !boardDisplayBirds[ci]) return;
+        boardDisplayBirds.forEach((bird, ci) => {
+            if (failed.has(ci)) return;
             if (ci === i) startAt = birds.length;
-            birds.push(boardDisplayBirds[ci]);
+            birds.push(bird);
             accents.push(boardDisplayAccents[ci]);
         });
         openLightboxAt(birds, accents, startAt);
@@ -642,6 +662,14 @@
         openCard(card);
     });
 
+    function rememberRatio(bird, img) {
+        const grab = () => {
+            if (img.naturalWidth && img.naturalHeight) bird.ratio = img.naturalWidth / img.naturalHeight;
+        };
+        if (img.complete) grab();
+        else img.addEventListener('load', grab, { once: true });
+    }
+
     function trackImageLoad(frameEl, img) {
         if (!frameEl || !img) return;
         if (img.complete && img.naturalWidth) {
@@ -652,6 +680,7 @@
     }
 
     function renderBoard(opts) {
+        stopBoardBatching();
         const wantFlip = !!(opts && opts.flip) && !prefersReducedMotion();
         const game = gamesData.find(g => g.id === activeGameId);
         if (!game) {
@@ -702,8 +731,7 @@
         boardDisplayBirds = displayBirds;
         boardDisplayAccents = gameAccents;
 
-        const fragment = document.createDocumentFragment();
-        displayBirds.forEach((bird, i) => {
+        function buildCard(bird, i, batchStart) {
             const birdKey = String(bird.key);
             const card = document.createElement('article');
             card.className = 'specimen';
@@ -711,7 +739,7 @@
             card.dataset.i = String(i);
             const tilt = (i % 5 - 2) * 0.6;
             card.style.setProperty('--tilt', `${tilt}deg`);
-            card.style.setProperty('--delay', `${Math.min(i * 35, 400)}ms`);
+            card.style.setProperty('--delay', `${Math.min((i - batchStart) * 35, 400)}ms`);
             card.style.setProperty('--accent', gameAccents[i]);
             card.tabIndex = 0;
             card.setAttribute('role', 'button');
@@ -738,6 +766,7 @@
                 img = prev.img;
             }
             trackImageLoad(frameEl, img);
+            rememberRatio(bird, img);
 
             withFullFallback(img, bird, () => {
                 card.dataset.failed = '1';
@@ -746,9 +775,36 @@
             });
 
             card.style.cursor = 'zoom-in';
-            fragment.appendChild(card);
-        });
-        boardGridEl.appendChild(fragment);
+            return card;
+        }
+
+        let renderedCount = 0;
+        function renderNextBatch() {
+            const start = renderedCount;
+            const end = Math.min(start + BOARD_BATCH_SIZE, displayBirds.length);
+            const fragment = document.createDocumentFragment();
+            for (let i = start; i < end; i++) fragment.appendChild(buildCard(displayBirds[i], i, start));
+            boardGridEl.appendChild(fragment);
+            renderedCount = end;
+            return renderedCount < displayBirds.length;
+        }
+
+        let hasMore = renderNextBatch();
+        if (hasMore) {
+            if (!('IntersectionObserver' in window)) {
+                while (hasMore) hasMore = renderNextBatch();
+            } else {
+                boardSentinelEl.hidden = false;
+                boardObserver = new IntersectionObserver((entries) => {
+                    if (!entries.some(e => e.isIntersecting)) return;
+                    if (!renderNextBatch()) { stopBoardBatching(); return; }
+                    // Re-check: if the sentinel is still near the viewport, load another batch.
+                    boardObserver.unobserve(boardSentinelEl);
+                    boardObserver.observe(boardSentinelEl);
+                }, { rootMargin: BOARD_LOAD_MARGIN });
+                boardObserver.observe(boardSentinelEl);
+            }
+        }
 
         if (doFlip) {
             const cards = Array.from(boardGridEl.children);
@@ -803,7 +859,13 @@
         if (n < 2) return;
         [1, -1].forEach(offset => {
             const b = lightboxBirds[(lightboxIndex + offset + n) % n];
-            if (b && b.image) { const im = new Image(); im.src = b.image; }
+            if (!b) return;
+            if (b.thumb && !(b.ratio > 0)) {
+                const t = new Image();
+                t.onload = () => { if (t.naturalWidth && t.naturalHeight) b.ratio = t.naturalWidth / t.naturalHeight; };
+                t.src = b.thumb;
+            }
+            if (b.image) { const im = new Image(); im.src = b.image; }
         });
     }
 
@@ -858,9 +920,60 @@
         }, LIGHTBOX_SWITCH_MS);
     }
 
+    let lightboxImgToken = 0;
+    const PLACEHOLDER_FALLBACK_RATIO = 16 / 9;
+    const BLANK_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+
+    function clearLightboxPlaceholder() {
+        lightboxImgEl.classList.remove('is-placeholder');
+        lightboxImgEl.style.backgroundImage = '';
+        lightboxImgEl.style.width = '';
+        lightboxImgEl.style.height = '';
+    }
+
+    function lightboxPlaceholderSize(ratio) {
+        const padSrc = lightboxMatEl || lightboxImgEl;
+        const pad = parseFloat(getComputedStyle(padSrc).paddingLeft) || 0;
+        const maxH = parseFloat(getComputedStyle(lightboxImgEl).maxHeight);
+        const maxW = Math.max(120, Math.min(window.innerWidth * 0.9, 900) - pad * 2);
+        let w = maxW, h = w / ratio;
+        if (isFinite(maxH) && h > maxH) { h = maxH; w = h * ratio; }
+        return { w: Math.round(w), h: Math.round(h) };
+    }
+
+    function setLightboxImage(item) {
+        const token = ++lightboxImgToken;
+        const full = item.image;
+        clearLightboxPlaceholder();
+
+        const pre = new Image();
+        pre.src = full;
+        if (pre.complete && pre.naturalWidth) {
+            lightboxImgEl.src = full;
+            return;
+        }
+
+        const { w, h } = lightboxPlaceholderSize(item.ratio > 0 ? item.ratio : PLACEHOLDER_FALLBACK_RATIO);
+        lightboxImgEl.src = BLANK_PIXEL;
+        lightboxImgEl.style.width = w + 'px';
+        lightboxImgEl.style.height = h + 'px';
+        if (item.thumb) {
+            lightboxImgEl.style.backgroundImage = 'url("' + item.thumb.replace(/["\\]/g, encodeURIComponent) + '")';
+        }
+        lightboxImgEl.classList.add('is-placeholder');
+
+        const swap = () => {
+            if (token !== lightboxImgToken) return;
+            clearLightboxPlaceholder();
+            lightboxImgEl.src = full;
+        };
+        const maybeSwap = () => { if (pre.complete && pre.naturalWidth) swap(); };
+        if (typeof pre.decode === 'function') pre.decode().then(swap, maybeSwap);
+        else { pre.addEventListener('load', swap, { once: true }); }
+    }
+
     function openLightbox(item, accent) {
         if (!lightboxEl) return;
-        lightboxImgEl.src = item.image;
         lightboxImgEl.alt = item.alt !== undefined ? item.alt : (item.title || '');
 
         const title = item.title || '';
@@ -882,6 +995,7 @@
         const wasHidden = lightboxEl.hidden;
         lightboxEl.hidden = false;
         document.body.style.overflow = 'hidden';
+        setLightboxImage(item);
         if (wasHidden) lightboxCloseEl.focus();
     }
 
@@ -894,6 +1008,8 @@
             lightboxEl.classList.remove('is-closing');
             if (lightboxFigureEl) lightboxFigureEl.classList.remove('is-switching');
             lightboxEl.hidden = true;
+            lightboxImgToken++;
+            clearLightboxPlaceholder();
             lightboxImgEl.removeAttribute('src');
             document.body.style.overflow = '';
             lightboxBirds = [];
@@ -1234,7 +1350,7 @@
             if (name) contributors.add(name);
         }));
         const totalCredits = contributors.size;
-        
+
         const exploredGames = new Set();
         gamesData.forEach(g => exploredGames.add((g.name || '').trim().toLowerCase()));
         NO_BIRDS_GAMES.forEach(name => {
@@ -1789,6 +1905,7 @@
                         e.preventDefault();
                         const gameId = firstBtn.closest('.game-item').dataset.gameId;
                         const r = firstBtn.getBoundingClientRect();
+                        // Deferred so this same keydown can't interrupt the scroll glide.
                         setTimeout(() => {
                             spawnConfetti(r.left + r.width / 2, r.top + r.height / 2);
                             selectGame(gameId, { scrollToBoard: true });

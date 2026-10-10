@@ -238,7 +238,7 @@ def generate_thumbs(size, quality, force, prune, workers):
         saved = 100 * (1 - thumb_bytes / max(src_bytes, 1))
         print(f"  {human(src_bytes)} of originals -> {human(thumb_bytes)} ({saved:.0f}% smaller)")
     if orphans:
-        print(f"  {len(orphans)} orphaned thumbnail(s) " + ("removed." if prune else "found - run with --prune to remove them."))
+        print(f"  {len(orphans)} orphaned thumbnail(s) " + ("removed." if prune else "found - kept because of --no-prune."))
     return failed == 0
 
 def main():
@@ -248,7 +248,7 @@ def main():
     ap.add_argument("--webp-quality", type=int, default=85)
     ap.add_argument("--workers", type=int, default=os.cpu_count() or 4)
     ap.add_argument("--force", action="store_true")
-    ap.add_argument("--prune", action="store_true")
+    ap.add_argument("--no-prune", action="store_true", help="keep orphaned thumbnails instead of deleting them")
     ap.add_argument("--skip-convert", action="store_true")
     ap.add_argument("--skip-csv", action="store_true")
     ap.add_argument("--skip-thumbs", action="store_true")
@@ -284,7 +284,7 @@ def main():
 
     ok = True
     if not args.skip_thumbs:
-        ok = generate_thumbs(args.size, args.quality, args.force, args.prune, args.workers)
+        ok = generate_thumbs(args.size, args.quality, args.force, not args.no_prune, args.workers)
         print()
     return 0 if ok else 1
 
