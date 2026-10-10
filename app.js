@@ -1234,10 +1234,17 @@
             if (name) contributors.add(name);
         }));
         const totalCredits = contributors.size;
+        
+        const exploredGames = new Set();
+        gamesData.forEach(g => exploredGames.add((g.name || '').trim().toLowerCase()));
+        NO_BIRDS_GAMES.forEach(name => {
+            const key = (name || '').trim().toLowerCase();
+            if (key) exploredGames.add(key);
+        });
 
         whenLedgerReady(() => {
             animateCount(statBirdsEl, totalBirds);
-            animateCount(statGamesEl, gamesData.length);
+            animateCount(statGamesEl, exploredGames.size);
             if (statContributorsEl) animateCount(statContributorsEl, totalCredits);
         });
     }
@@ -1766,7 +1773,7 @@
         }
 
         if (birdsOk) {
-            renderStats();
+            noBirdsLoad.then(renderStats);
             renderSidebar();
             if (gameSearchEl) {
                 gameSearchEl.addEventListener('input', () => renderSidebar({ fromSearch: true }));
@@ -1782,7 +1789,6 @@
                         e.preventDefault();
                         const gameId = firstBtn.closest('.game-item').dataset.gameId;
                         const r = firstBtn.getBoundingClientRect();
-                        // Deferred so this same keydown can't interrupt the scroll glide.
                         setTimeout(() => {
                             spawnConfetti(r.left + r.width / 2, r.top + r.height / 2);
                             selectGame(gameId, { scrollToBoard: true });
@@ -1823,7 +1829,6 @@
         const valueEl = boardSortEl.querySelector('.board__sort-value');
         let activeIndex = -1;
 
-        // Invisible copies of every label keep the pill the same width whichever option is picked.
         options.forEach(opt => {
             const sizer = document.createElement('span');
             sizer.className = 'board__sort-sizer';
