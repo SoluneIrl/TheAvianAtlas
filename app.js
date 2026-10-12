@@ -189,15 +189,38 @@
     const PLACEHOLDER_ICON = `<img src="Assets/Resources/Default.png" alt=""/>`
     const USE_THUMBS = true;
     const GAMES_ROOT = 'Assets/Games';
-    const THUMBS_ROOT = 'Assets/Thumbs';
+    const THUMBS_ROOT = 'Assets/Thumbs';       // 480px  - grid cards
+    const THUMBS_2X_ROOT = 'Assets/Thumbs2x';  // 960px  - grid cards on high-DPI screens
+    const MID_ROOT = 'Assets/Mid';             // 1600px - lightbox
 
-    function thumbPathFor(fullPath) {
+    function variantPathFor(root, fullPath) {
         if (!USE_THUMBS || !fullPath || !fullPath.startsWith(GAMES_ROOT + '/')) return '';
-        return THUMBS_ROOT + fullPath.slice(GAMES_ROOT.length) + '.webp';
+        return root + fullPath.slice(GAMES_ROOT.length) + '.webp';
+    }
+
+    function thumbPathFor(fullPath) { return variantPathFor(THUMBS_ROOT, fullPath); }
+    function thumb2xPathFor(fullPath) { return variantPathFor(THUMBS_2X_ROOT, fullPath); }
+    function midPathFor(fullPath) { return variantPathFor(MID_ROOT, fullPath); }
+
+    // srcset attribute for grid/log thumbnails (empty string when there is no 2x file to offer).
+    function srcsetAttr(bird) {
+        if (!bird.thumb || !bird.thumb2x) return '';
+        return `srcset="${escapeHTML(`${bird.thumb} 1x, ${bird.thumb2x} 2x`)}"`;
+    }
+
+    // What the lightbox should load: the 1600px version, or the original if there isn't one.
+    function lightboxSrcFor(item) {
+        return item.mid || item.image;
     }
 
     function withFullFallback(img, bird, onFail) {
         const onError = () => {
+            const failedSrc = img.currentSrc || '';
+            if (img.hasAttribute('srcset')) {
+                img.removeAttribute('srcset');
+                // Only the 2x file was missing: the plain 1x thumbnail is still worth a try.
+                if (bird.thumb2x && failedSrc.endsWith(bird.thumb2x)) return;
+            }
             if (bird.thumb && bird.image && img.getAttribute('src') === bird.thumb) {
                 img.src = bird.image;
                 return;
@@ -240,48 +263,18 @@
     let lightboxIndex = -1;
     let lightboxTriggerEl = null;
 
-    function parseCSV(text) {
-        const rows = [];
-        let row = [];
-        let field = '';
-        let inQuotes = false;
+    // index.html stamps a content hash of Data/*.json here (see autojson.py). Appending it to
+    // every JSON request means the data always matches the app.js/styles.css that came with
+    // the same index.html, even while GitHub Pages is still caching older copies.
+    const DATA_VERSION = (document.querySelector('meta[name="data-version"]') || {}).content || '';
 
-        for (let i = 0; i < text.length; i++) {
-            const char = text[i];
-
-            if (inQuotes) {
-                if (char === '"') {
-                    if (text[i + 1] === '"') { field += '"'; i++; }
-                    else { inQuotes = false; }
-                } else {
-                    field += char;
-                }
-                continue;
-            }
-
-            if (char === '"') { inQuotes = true; }
-            else if (char === ',') { row.push(field); field = ''; }
-            else if (char === '\n' || char === '\r') {
-                if (char === '\r' && text[i + 1] === '\n') i++;
-                row.push(field); field = '';
-                if (row.some(f => f.trim() !== '')) rows.push(row);
-                row = [];
-            } else {
-                field += char;
-            }
-        }
-        if (field !== '' || row.length) {
-            row.push(field);
-            if (row.some(f => f.trim() !== '')) rows.push(row);
-        }
-
-        if (!rows.length) return [];
-        const headers = rows[0].map(h => h.trim().toLowerCase());
-        return rows.slice(1).map(r => {
-            const obj = {};
-            headers.forEach((h, i) => { obj[h] = (r[i] ?? '').trim(); });
-            return obj;
-        });
+    async function fetchJSON(path, options) {
+        const url = DATA_VERSION
+            ? `${path}${path.includes('?') ? '&' : '?'}v=${encodeURIComponent(DATA_VERSION)}`
+            : path;
+        const res = await fetch(url, options);
+        if (!res.ok) throw new Error(`Failed to load ${path} (${res.status})`);
+        return res.json();
     }
 
     function slugify(str) {
@@ -309,7 +302,7 @@
 
     const RESERVED_SLUGS = new Set(['top', 'collection', 'no-birds', 'logbook', 'smile', 'aboutme', 'about-me', 'lightbox']);
 
-    function rowsToGames(rows) {
+    function rowsToGames(rows, credits = {}) {
         const order = [];
         const byName = new Map();
         const usedSlugs = new Set();
@@ -326,7 +319,7 @@
         }
 
         rows.forEach(r => {
-            const gameName = r.game || 'Untitled Game';
+            const gameName = String(r.game ?? '').trim() || 'Untitled Game';
             if (!byName.has(gameName)) {
                 byName.set(gameName, {
                     id: uniqueSlug(gameName),
@@ -337,15 +330,17 @@
                 order.push(gameName);
             }
             const entry = byName.get(gameName);
-            const image = resolveImagePath(gameName, r.image);
+            const image = resolveImagePath(gameName, String(r.image ?? ''));
             entry.birds.push({
                 key: entry.birds.length,
-                id: r.id || String(entry.birds.length + 1),
-                title: r.title || 'Untitled bird',
+                id: String(r.id ?? '').trim() || String(entry.birds.length + 1),
+                title: String(r.title ?? '').trim() || 'Untitled bird',
                 image,
                 thumb: thumbPathFor(image),
-                credit: r.credit || '',
-                date: (r.date || '').trim()
+                thumb2x: thumb2xPathFor(image),
+                mid: midPathFor(image),
+                credit: String((credits[gameName] || {})[String(r.image ?? '').trim()] ?? '').trim(),
+                date: String(r.date ?? '').trim()
             });
         });
 
@@ -748,7 +743,7 @@
             card.innerHTML = `
         ${isNewBird(bird) ? '<span class="specimen__new"><span class="specimen__new-band">NEW</span></span>' : ''}
         <div class="specimen__frame is-loading">
-          <img src="${escapeHTML(bird.thumb || bird.image)}" alt="${escapeHTML(bird.title)}" loading="lazy" decoding="async" />
+          <img src="${escapeHTML(bird.thumb || bird.image)}" ${srcsetAttr(bird)} alt="${escapeHTML(bird.title)}" loading="lazy" decoding="async" />
         </div>
         <p class="specimen__id">${catalogNumber(gameIndex, bird.id)}</p>
         <h3 class="specimen__title">${escapeHTML(bird.title)}</h3>
@@ -865,7 +860,8 @@
                 t.onload = () => { if (t.naturalWidth && t.naturalHeight) b.ratio = t.naturalWidth / t.naturalHeight; };
                 t.src = b.thumb;
             }
-            if (b.image) { const im = new Image(); im.src = b.image; }
+            const next = lightboxSrcFor(b);
+            if (next) { const im = new Image(); im.src = next; }
         });
     }
 
@@ -941,13 +937,17 @@
         return { w: Math.round(w), h: Math.round(h) };
     }
 
-    function setLightboxImage(item) {
+    function setLightboxImage(item, useOriginal = false) {
         const token = ++lightboxImgToken;
-        const full = item.image;
+        const full = useOriginal ? item.image : lightboxSrcFor(item);
         clearLightboxPlaceholder();
 
         const pre = new Image();
         pre.src = full;
+        // No 1600px file (or it failed)? Fall back to the original instead of leaving the placeholder up.
+        pre.addEventListener('error', () => {
+            if (token === lightboxImgToken && full !== item.image) setLightboxImage(item, true);
+        }, { once: true });
         if (pre.complete && pre.naturalWidth) {
             lightboxImgEl.src = full;
             return;
@@ -1386,7 +1386,7 @@
             game.birds.forEach(bird => {
                 const date = (bird.date || '').trim();
                 if (!date) return;
-                items.push({ date, title: bird.title, image: bird.image, thumb: bird.thumb, gameName: game.name });
+                items.push({ date, title: bird.title, image: bird.image, thumb: bird.thumb, thumb2x: bird.thumb2x, mid: bird.mid, gameName: game.name });
             });
         });
         return items.sort((a, b) =>
@@ -1403,11 +1403,10 @@
     function buildDevLogItems() {
         return devLogRows
             .map(r => ({
-                date: (r.date || '').trim(),
-                text: (r.text || '').trim(),
-                images: String(r.img || '')
-                    .split(/\s*\|\s*/)
-                    .map(name => resolveDevImagePath(name))
+                date: String(r.date ?? '').trim(),
+                text: (Array.isArray(r.text) ? r.text.join('\n') : String(r.text ?? '')).trim(),
+                images: (Array.isArray(r.img) ? r.img : String(r.img ?? '').split(/\s*\|\s*/))
+                    .map(name => resolveDevImagePath(String(name ?? '')))
                     .filter(Boolean)
             }))
             .filter(item => item.date || item.text)
@@ -1451,7 +1450,7 @@
 
         const src = bird.thumb || bird.image;
         const imgTag = src
-            ? `<img src="${escapeHTML(src)}" alt="${escapeHTML(bird.title)}" loading="lazy" decoding="async" />`
+            ? `<img src="${escapeHTML(src)}" ${bird.thumb ? srcsetAttr(bird) : ''} alt="${escapeHTML(bird.title)}" loading="lazy" decoding="async" />`
             : PLACEHOLDER_ICON;
 
         card.innerHTML = `
@@ -1746,10 +1745,8 @@
 
     async function loadDevLog() {
         try {
-            const res = await fetch('Data/dev.csv');
-            if (!res.ok) throw new Error('Failed to load dev.csv');
-            const text = await res.text();
-            devLogRows = parseCSV(text);
+            const rows = await fetchJSON('Data/dev.json');
+            devLogRows = Array.isArray(rows) ? rows : [];
         } catch (err) {
             console.error(err);
             devLogRows = [];
@@ -1757,19 +1754,21 @@
     }
 
     async function loadBirds() {
-        const res = await fetch('Data/birds.csv');
-        if (!res.ok) throw new Error('Failed to load birds.csv');
-        const text = await res.text();
-        gamesData = rowsToGames(parseCSV(text));
+        const [rows, credits] = await Promise.all([
+            fetchJSON('Data/birds.json'),
+            // Credits are a nice-to-have: if this file is missing or broken, the birds still load.
+            fetchJSON('Data/credits.json').catch(err => { console.error(err); return {}; })
+        ]);
+        if (!Array.isArray(rows)) throw new Error('birds.json should be an array of bird entries');
+        const creditMap = credits && typeof credits === 'object' && !Array.isArray(credits) ? credits : {};
+        gamesData = rowsToGames(rows, creditMap);
     }
 
     async function loadNoBirds() {
         try {
-            const res = await fetch('Data/nobirds.csv');
-            if (!res.ok) throw new Error('Failed to load nobirds.csv');
-            const text = await res.text();
-            NO_BIRDS_GAMES = parseCSV(text)
-                .map(row => (row.game || '').trim())
+            const rows = await fetchJSON('Data/nobirds.json');
+            NO_BIRDS_GAMES = (Array.isArray(rows) ? rows : [])
+                .map(name => String(name ?? '').trim())
                 .filter(Boolean);
         } catch (err) {
             console.error(err);
@@ -1779,11 +1778,13 @@
 
     async function loadSmile() {
         try {
-            const res = await fetch('Data/smile.csv', { cache: 'no-cache' });
-            if (!res.ok) throw new Error('Failed to load smile.csv');
-            const text = await res.text();
-            smileRows = parseCSV(text)
-                .map((r, i) => ({ id: (r.id || '').trim() || String(i + 1), user: (r.user || '').trim(), message: (r.message || '').trim() }))
+            const rows = await fetchJSON('Data/smile.json', { cache: 'no-cache' });
+            smileRows = (Array.isArray(rows) ? rows : [])
+                .map((r, i) => ({
+                    id: String(r.id ?? '').trim() || String(i + 1),
+                    user: String(r.user ?? '').trim(),
+                    message: String(r.message ?? '').trim()
+                }))
                 .filter(r => r.user || r.message);
         } catch (err) {
             console.error(err);
@@ -1860,11 +1861,19 @@
     }
 
     let secretOpened = false;
-    let secretDataReady = false;
     let secretRendered = false;
+    let secretLoad = null;
 
-    function renderSecretSections() {
-        if (secretRendered || !secretOpened || !secretDataReady) return;
+    // dev.json and smile.json are only needed once the secret section is opened.
+    function loadSecretData() {
+        if (!secretLoad) secretLoad = Promise.all([loadDevLog(), loadSmile()]);
+        return secretLoad;
+    }
+
+    async function renderSecretSections() {
+        if (secretRendered || !secretOpened) return;
+        await loadSecretData();
+        if (secretRendered) return;
         secretRendered = true;
         renderLogbook();
         renderSmile();
@@ -1874,9 +1883,7 @@
         renderBoardSkeleton();
 
         const birdsLoad   = loadBirds();
-        const devLoad     = loadDevLog();
         const noBirdsLoad = loadNoBirds();
-        const smileLoad   = loadSmile();
 
         noBirdsLoad.then(initNoBirds);
 
@@ -1932,10 +1939,6 @@
             boardMetaEl.textContent = '';
             boardGridEl.innerHTML = '';
         }
-
-        await Promise.all([devLoad, smileLoad]);
-        secretDataReady = true;
-        renderSecretSections();
     }
 
     function initSortDropdown() {
@@ -2073,6 +2076,10 @@
         window.addEventListener('pageshow', (e) => {
             if (e.persisted) forceClosed();
         });
+
+        const warmUp = () => { loadSecretData(); };
+        toggleEl.addEventListener('pointerenter', warmUp, { once: true });
+        toggleEl.addEventListener('focus', warmUp, { once: true });
 
         toggleEl.addEventListener('click', (e) => {
             const opening = sectionEl.hidden;

@@ -1,10 +1,25 @@
 {
   "name": "the-avian-atlas",
+  "author": "solune",
   "version": "1.0.0",
   "description": "A personal catalogue of every bird spotted across video games.",
+  "homepage": "https://soluneirl.github.io/TheAvianAtlas/",
   "main": "index.html",
   "scripts": {
-    "start": "python3 -m http.server 8000"
+    "start": "python3 -m http.server 8000",
+    "update": "python3 Data/autojson.py",
+    "update:force": "python3 Data/autojson.py --force --touch-sitemap",
+    "update:json": "python3 Data/autojson.py --skip-convert --skip-thumbs",
+    "stamp": "python3 Data/autojson.py --skip-convert --skip-json --skip-thumbs --skip-sitemap"
   },
-  "private": true
+  "keywords": [
+    "birds",
+    "games",
+    "theavianatlas",
+    "github-pages"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SoluneIrl/TheAvianAtlas.git"
+  }
 }
