@@ -17,9 +17,10 @@ DATA_DIR = Path(__file__).resolve().parent
 ROOT = DATA_DIR.parent
 GAMES_DIR = ROOT / "Assets" / "Games"
 DEV_DIR = ROOT / "Assets" / "Dev"
-THUMBS_DIR = ROOT / "Assets" / "Thumbs"        # 480px  - grid cards (1x)
-THUMBS_2X_DIR = ROOT / "Assets" / "Thumbs2x"   # 960px  - grid cards on high-DPI screens (srcset 2x)
-MID_DIR = ROOT / "Assets" / "Mid"              # 1600px - lightbox
+THUMBS_ROOT = ROOT / "Assets" / "Thumbs"
+THUMBS_1X_DIR = THUMBS_ROOT / "1x"   # 480px  - grid cards
+THUMBS_2X_DIR = THUMBS_ROOT / "2x"   # 960px  - grid cards on high-DPI screens (srcset 2x)
+THUMBS_3X_DIR = THUMBS_ROOT / "3x"   # 1600px - lightbox
 BIRDS_JSON = DATA_DIR / "birds.json"
 DEV_JSON = DATA_DIR / "dev.json"
 CREDITS_JSON = DATA_DIR / "credits.json"
@@ -308,7 +309,7 @@ def generate_thumbs(variants, force, prune, workers):
     for src in sorted(p for p in GAMES_DIR.rglob("*") if p.is_file() and p.suffix.lower() in THUMB_SRC_EXTS):
         outputs = []
         for label, folder, size, quality in variants:
-            dest = Path(str(folder / src.relative_to(GAMES_DIR)) + ".webp")
+            dest = (folder / src.relative_to(GAMES_DIR)).with_suffix(".webp")
             expected.add(dest)
             if not force and dest.exists() and dest.stat().st_mtime >= src.stat().st_mtime:
                 continue
@@ -503,9 +504,9 @@ def main():
     ok = True
     if not args.skip_thumbs:
         variants = [
-            (f"{args.size}px", THUMBS_DIR, args.size, args.quality),
+            (f"{args.size}px", THUMBS_1X_DIR, args.size, args.quality),
             (f"{args.size_2x}px", THUMBS_2X_DIR, args.size_2x, args.quality),
-            (f"{args.mid_size}px", MID_DIR, args.mid_size, args.mid_quality),
+            (f"{args.mid_size}px", THUMBS_3X_DIR, args.mid_size, args.mid_quality),
         ]
         ok, thumbs_changed = generate_thumbs(variants, args.force, not args.no_prune, args.workers)
         site_changed |= thumbs_changed

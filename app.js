@@ -189,13 +189,13 @@
     const PLACEHOLDER_ICON = `<img src="Assets/Resources/Default.png" alt=""/>`
     const USE_THUMBS = true;
     const GAMES_ROOT = 'Assets/Games';
-    const THUMBS_ROOT = 'Assets/Thumbs';       // 480px  - grid cards
-    const THUMBS_2X_ROOT = 'Assets/Thumbs2x';  // 960px  - grid cards on high-DPI screens
-    const MID_ROOT = 'Assets/Mid';             // 1600px - lightbox
+    const THUMBS_ROOT = 'Assets/Thumbs/1x';     // 480px  - grid cards
+    const THUMBS_2X_ROOT = 'Assets/Thumbs/2x';  // 960px  - grid cards on high-DPI screens
+    const MID_ROOT = 'Assets/Thumbs/3x';        // 1600px - lightbox
 
     function variantPathFor(root, fullPath) {
         if (!USE_THUMBS || !fullPath || !fullPath.startsWith(GAMES_ROOT + '/')) return '';
-        return root + fullPath.slice(GAMES_ROOT.length) + '.webp';
+        return root + fullPath.slice(GAMES_ROOT.length).replace(/\.[^./]+$/, '') + '.webp';
     }
 
     function thumbPathFor(fullPath) { return variantPathFor(THUMBS_ROOT, fullPath); }
