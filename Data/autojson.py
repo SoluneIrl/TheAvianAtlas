@@ -129,7 +129,7 @@ def convert_folder_to_webp(folder, quality):
                 icc = im.info.get("icc_profile")
                 im = ImageOps.exif_transpose(im)
                 im = im.convert("RGBA" if has_alpha(im) else "RGB")
-                kwargs = {"quality": quality, "method": 6}
+                kwargs = {"quality": quality, "method": 4}
                 if icc:
                     kwargs["icc_profile"] = icc
                 im.save(dest, "WEBP", **kwargs)
@@ -291,7 +291,7 @@ def make_thumbs(job):
                 variant = im.copy()
                 variant.thumbnail((size, size), RESAMPLE)  # only ever shrinks
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                variant.save(dest, "WEBP", quality=quality, method=6)
+                variant.save(dest, "WEBP", quality=quality, method=4)
                 sizes[label] = dest.stat().st_size
         return src, "ok", src.stat().st_size, sizes
     except Exception as exc:
@@ -322,8 +322,9 @@ def generate_thumbs(variants, force, prune, workers):
     src_bytes = 0
     out_bytes = {label: 0 for label, *_ in variants}
     if jobs:
-        with ThreadPoolExecutor(max_workers=workers) as pool:
-            for src, status, sb, sizes in pool.map(make_thumbs, jobs):
+        pool = ThreadPoolExecutor(max_workers=workers)
+        try:
+            for done, (src, status, sb, sizes) in enumerate(pool.map(make_thumbs, jobs), start=1):
                 if status == "ok":
                     made += 1
                     src_bytes += sb
@@ -331,10 +332,18 @@ def generate_thumbs(variants, force, prune, workers):
                         out_bytes[label] += nbytes
                 elif status == "animated":
                     animated += 1
-                    print(f"  skipped  {src} (animated - the site will use the original)")
+                    print(f"\r  skipped  {src} (animated - the site will use the original)")
                 else:
                     failed += 1
-                    print(f"  {status.split(':')[0]}   {src}:{status.split(':', 1)[1]}")
+                    print(f"\r  {status.split(':')[0]}   {src}:{status.split(':', 1)[1]}")
+                print(f"\r  thumbnails: {done}/{len(jobs)}", end="", flush=True)
+            print()
+        except KeyboardInterrupt:
+            print("\nStopping...")
+            pool.shutdown(wait=False, cancel_futures=True)
+            os._exit(130)  # worker threads are joined at normal exit, so bail out hard
+        else:
+            pool.shutdown()
 
     orphans = []
     for folder in {f for _, f, _, _ in variants}:
