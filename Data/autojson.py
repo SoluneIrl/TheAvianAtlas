@@ -18,9 +18,9 @@ ROOT = DATA_DIR.parent
 GAMES_DIR = ROOT / "Assets" / "Games"
 DEV_DIR = ROOT / "Assets" / "Dev"
 THUMBS_ROOT = ROOT / "Assets" / "Thumbs"
-THUMBS_1X_DIR = THUMBS_ROOT / "1x"   # 480px  - grid cards
-THUMBS_2X_DIR = THUMBS_ROOT / "2x"   # 960px  - grid cards on high-DPI screens (srcset 2x)
-THUMBS_3X_DIR = THUMBS_ROOT / "3x"   # 1600px - lightbox
+THUMBS_1X_DIR = THUMBS_ROOT / "1x"
+THUMBS_2X_DIR = THUMBS_ROOT / "2x"
+THUMBS_3X_DIR = THUMBS_ROOT / "3x"
 BIRDS_JSON = DATA_DIR / "birds.json"
 DEV_JSON = DATA_DIR / "dev.json"
 CREDITS_JSON = DATA_DIR / "credits.json"
@@ -39,7 +39,6 @@ def natural_key(name):
     return [int(c) if c.isdigit() else c.lower() for c in re.split(r"(\d+)", name)]
 
 def list_images(folder):
-    """Top-level image files in a folder, naturally sorted (empty if folder missing)."""
     if not folder.is_dir():
         return []
     files = [p for p in folder.iterdir()
@@ -77,11 +76,6 @@ def text_of(value):
 
 
 def read_json(path):
-    """Load a JSON array of objects ([] if the file doesn't exist yet).
-
-    A file that exists but can't be parsed stops the script instead of being
-    treated as empty - otherwise a typo could wipe saved credits and dates.
-    """
     if not path.is_file():
         return []
     try:
@@ -95,7 +89,6 @@ def read_json(path):
 
 
 def write_json(path, rows, one_per_line=False):
-    """Write a JSON array; returns True if the file's content actually changed."""
     if one_per_line and rows:
         body = ",\n".join("  " + json.dumps(r, ensure_ascii=False) for r in rows)
         text = "[\n" + body + "\n]\n"
@@ -110,7 +103,6 @@ def write_json(path, rows, one_per_line=False):
     return True
 
 def convert_folder_to_webp(folder, quality):
-    """Convert PNG/JPG in `folder` to .webp and delete the originals."""
     converted, skipped = 0, []
     if Image is None or not folder.is_dir():
         return converted, skipped
@@ -142,11 +134,6 @@ def convert_folder_to_webp(folder, quality):
     return converted, skipped
 
 def read_credits():
-    """Load credits.json as {game: {image filename: credit}} ({} if it doesn't exist yet).
-
-    Like read_json, a file that can't be parsed stops the script instead of being
-    treated as empty.
-    """
     if not CREDITS_JSON.is_file():
         return {}
     try:
@@ -161,7 +148,6 @@ def read_credits():
 
 
 def legacy_credits(rows):
-    """One-time migration: pull the old per-row "credit" fields out of birds.json."""
     credits = {}
     for row in rows:
         credit = text_of(row.get("credit"))
@@ -178,8 +164,6 @@ def rebuild_birds_json():
 
     old_rows = read_json(BIRDS_JSON)
 
-    # Credits live in credits.json (hand-edited). If it doesn't exist yet, seed it once
-    # from any credits still sitting in birds.json.
     if CREDITS_JSON.is_file():
         credits = read_credits()
     else:
@@ -188,7 +172,6 @@ def rebuild_birds_json():
             write_json(CREDITS_JSON, credits)
             print(f"Created {CREDITS_JSON.name} from the credits that were in birds.json.")
 
-    # Dates are remembered from the previous birds.json so they survive rebuilds.
     dates = {}
     for row in old_rows:
         date = text_of(row.get("date"))
@@ -279,8 +262,6 @@ def update_dev_json():
     return changed
 
 def make_thumbs(job):
-    """Decode one source image once and write every missing size for it."""
-    src, outputs = job  # outputs: [(label, dest, size, quality), ...]
     try:
         with Image.open(src) as im:
             if getattr(im, "is_animated", False):
@@ -300,7 +281,6 @@ def make_thumbs(job):
 
 
 def generate_thumbs(variants, force, prune, workers):
-    """variants: [(label, folder, size, quality), ...]. Missing sizes are filled in without redoing the rest."""
     if not GAMES_DIR.is_dir():
         print(f"Can't find {GAMES_DIR} - skipped thumbnails.")
         return True, False
@@ -342,7 +322,7 @@ def generate_thumbs(variants, force, prune, workers):
         except KeyboardInterrupt:
             print("\nStopping...")
             pool.shutdown(wait=False, cancel_futures=True)
-            os._exit(130)  # worker threads are joined at normal exit, so bail out hard
+            os._exit(130)
         else:
             pool.shutdown()
 
@@ -370,7 +350,6 @@ def generate_thumbs(variants, force, prune, workers):
 
 
 def short_hash(paths):
-    """Short content hash of some files (line endings normalised so Windows/Linux agree)."""
     h = hashlib.sha1()
     for path in sorted(paths, key=lambda p: p.name):
         if path.is_file():
@@ -380,13 +359,6 @@ def short_hash(paths):
 
 
 def stamp_versions():
-    """Stamp content hashes into index.html so browsers/CDN never mix old and new files.
-
-    app.js and styles.css each get their own ?v= (so editing a bird doesn't re-download them),
-    and the Data/*.json files share one version, stored in <meta name="data-version"> - app.js
-    reads it and appends it to every JSON fetch. Because it all hangs off index.html, a visitor
-    with a slightly stale index.html gets a consistent set of *old* files, never a mix.
-    """
     if not INDEX_HTML.is_file():
         print(f"Can't find {INDEX_HTML} - skipped cache-busting.")
         return False

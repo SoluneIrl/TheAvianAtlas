@@ -201,14 +201,11 @@
     function thumbPathFor(fullPath) { return variantPathFor(THUMBS_ROOT, fullPath); }
     function thumb2xPathFor(fullPath) { return variantPathFor(THUMBS_2X_ROOT, fullPath); }
     function midPathFor(fullPath) { return variantPathFor(MID_ROOT, fullPath); }
-
-    // srcset attribute for grid/log thumbnails (empty string when there is no 2x file to offer).
     function srcsetAttr(bird) {
         if (!bird.thumb || !bird.thumb2x) return '';
         return `srcset="${escapeHTML(`${bird.thumb} 1x, ${bird.thumb2x} 2x`)}"`;
     }
 
-    // What the lightbox should load: the 1600px version, or the original if there isn't one.
     function lightboxSrcFor(item) {
         return item.mid || item.image;
     }
@@ -262,10 +259,6 @@
     let lightboxAccents = [];
     let lightboxIndex = -1;
     let lightboxTriggerEl = null;
-
-    // index.html stamps a content hash of Data/*.json here (see autojson.py). Appending it to
-    // every JSON request means the data always matches the app.js/styles.css that came with
-    // the same index.html, even while GitHub Pages is still caching older copies.
     const DATA_VERSION = (document.querySelector('meta[name="data-version"]') || {}).content || '';
 
     async function fetchJSON(path, options) {
@@ -793,7 +786,6 @@
                 boardObserver = new IntersectionObserver((entries) => {
                     if (!entries.some(e => e.isIntersecting)) return;
                     if (!renderNextBatch()) { stopBoardBatching(); return; }
-                    // Re-check: if the sentinel is still near the viewport, load another batch.
                     boardObserver.unobserve(boardSentinelEl);
                     boardObserver.observe(boardSentinelEl);
                 }, { rootMargin: BOARD_LOAD_MARGIN });
@@ -944,7 +936,6 @@
 
         const pre = new Image();
         pre.src = full;
-        // No 1600px file (or it failed)? Fall back to the original instead of leaving the placeholder up.
         pre.addEventListener('error', () => {
             if (token === lightboxImgToken && full !== item.image) setLightboxImage(item, true);
         }, { once: true });
@@ -1756,7 +1747,6 @@
     async function loadBirds() {
         const [rows, credits] = await Promise.all([
             fetchJSON('Data/birds.json'),
-            // Credits are a nice-to-have: if this file is missing or broken, the birds still load.
             fetchJSON('Data/credits.json').catch(err => { console.error(err); return {}; })
         ]);
         if (!Array.isArray(rows)) throw new Error('birds.json should be an array of bird entries');
@@ -1864,7 +1854,6 @@
     let secretRendered = false;
     let secretLoad = null;
 
-    // dev.json and smile.json are only needed once the secret section is opened.
     function loadSecretData() {
         if (!secretLoad) secretLoad = Promise.all([loadDevLog(), loadSmile()]);
         return secretLoad;
@@ -1912,7 +1901,6 @@
                         e.preventDefault();
                         const gameId = firstBtn.closest('.game-item').dataset.gameId;
                         const r = firstBtn.getBoundingClientRect();
-                        // Deferred so this same keydown can't interrupt the scroll glide.
                         setTimeout(() => {
                             spawnConfetti(r.left + r.width / 2, r.top + r.height / 2);
                             selectGame(gameId, { scrollToBoard: true });
