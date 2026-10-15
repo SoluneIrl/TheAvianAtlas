@@ -262,6 +262,7 @@ def update_dev_json():
     return changed
 
 def make_thumbs(job):
+    src, outputs = job  # outputs: [(label, dest, size, quality), ...]
     try:
         with Image.open(src) as im:
             if getattr(im, "is_animated", False):
