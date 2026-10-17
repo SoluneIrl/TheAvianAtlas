@@ -272,7 +272,7 @@ def make_thumbs(job):
             sizes = {}
             for label, dest, size, quality in outputs:
                 variant = im.copy()
-                variant.thumbnail((size, size), RESAMPLE)  # only ever shrinks
+                variant.thumbnail((size, size), RESAMPLE)
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 variant.save(dest, "WEBP", quality=quality, method=4)
                 sizes[label] = dest.stat().st_size

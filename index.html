@@ -24,10 +24,34 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Work+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&family=Caveat:wght@500;700&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Work+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&family=Caveat:wght@500;700&display=swap"></noscript>
-    <meta name="data-version" content="401bc588" />
+    <meta name="data-version" content="7afd14c8" />
     <link rel="stylesheet" href="styles.css?v=93cfd5ae" />
-    <link rel="preload" as="fetch" href="Data/birds.json?v=401bc588" crossorigin>
-    <link rel="preload" as="fetch" href="Data/credits.json?v=401bc588" crossorigin>
+    <script>
+        (function () {
+            var root = document.documentElement;
+            var parts = ['dawn', 'day', 'golden', 'dusk', 'night'];
+            function daypartFor(hour) {
+                if (hour >= 21 || hour < 6) return 'night';
+                if (hour < 8) return 'dawn';
+                if (hour < 16) return 'day';
+                if (hour < 19) return 'golden';
+                return 'dusk';
+            }
+            function apply() {
+                var forced = new URLSearchParams(location.search).get('daypart');
+                var part = parts.indexOf(forced) !== -1 ? forced : daypartFor(new Date().getHours());
+                if (root.getAttribute('data-daypart') === part) return;
+                root.setAttribute('data-daypart', part);
+                var meta = document.querySelector('meta[name="theme-color"]');
+                var page = getComputedStyle(root).getPropertyValue('--color-page').trim();
+                if (meta && page) meta.setAttribute('content', page);
+            }
+            apply();
+            setInterval(apply, 300000);
+        })();
+    </script>
+    <link rel="preload" as="fetch" href="Data/birds.json?v=7afd14c8" crossorigin>
+    <link rel="preload" as="fetch" href="Data/credits.json?v=7afd14c8" crossorigin>
     <script src="app.js?v=3b1616a3" defer></script>
 </head>
 <body>
@@ -45,10 +69,10 @@
             Vol I &nbsp;&middot;&nbsp; The Avian Atlas
         </div>
 
-        <h1 class="hero__title">My Digital Bird Watching Journey</h1>
+        <h1 class="hero__title"><span class="hw" style="--i:0"><span>My</span></span> <span class="hw" style="--i:1"><span>Digital</span></span> <span class="hw" style="--i:2"><span>Bird</span></span> <span class="hw" style="--i:3"><span>Watching</span></span> <span class="hw" style="--i:4"><span>Journey</span></span></h1>
 
         <p class="hero__sub">
-            I hope this little project of mine reflects both my love for birds and gaming. I don’t see myself stopping anytime soon, and I can’t wait to keep adding to it and watching this collection grow!
+            I hope this project of mine reflects both my love for birds and gaming. I don’t see myself stopping anytime soon, and I can’t wait to keep adding to it and watching this collection grow!
         </p>
 
         <button type="button" id="musicToggle" class="music-line" aria-pressed="false">
@@ -208,7 +232,7 @@
     <figure class="lightbox__figure">
         <div class="lightbox__media">
             <div class="lightbox__mat">
-                <img class="lightbox__img" id="lightboxImg" src="" alt="" />
+                <img class="lightbox__img" id="lightboxImg" alt="" />
             </div>
             <button class="lightbox__nav lightbox__nav--prev" id="lightboxPrev" type="button" aria-label="Previous bird">
                 <svg width="20" height="20" viewBox="-5.5 0 26 26" fill="currentColor" aria-hidden="true"><path d="M428.115,1209 L437.371,1200.6 C438.202,1199.77 438.202,1198.43 437.371,1197.6 C436.541,1196.76 435.194,1196.76 434.363,1197.6 L423.596,1207.36 C423.146,1207.81 422.948,1208.41 422.985,1209 C422.948,1209.59 423.146,1210.19 423.596,1210.64 L434.363,1220.4 C435.194,1221.24 436.541,1221.24 437.371,1220.4 C438.202,1219.57 438.202,1218.23 437.371,1217.4 L428.115,1209" transform="translate(-423,-1196)"/></svg>
@@ -306,11 +330,11 @@
 
         <div class="logbook__tabs" role="tablist" aria-label="Logbook">
             <button type="button" class="logbook__tab is-active" id="logTabDev" role="tab" aria-selected="true" aria-controls="logPanelDev">Dev Log</button>
-            <button type="button" class="logbook__tab" id="logTabBirds" role="tab" aria-selected="false" aria-controls="logPanelBirds">Birb Log</button>
+            <button type="button" class="logbook__tab" id="logTabBirds" role="tab" tabindex="-1" aria-selected="false" aria-controls="logPanelBirds">Birb Log</button>
         </div>
 
-        <div class="logbook__panel logbook__panel--dev" id="logPanelDev" role="tabpanel"></div>
-        <div class="logbook__panel" id="logPanelBirds" role="tabpanel" hidden></div>
+        <div class="logbook__panel logbook__panel--dev" id="logPanelDev" role="tabpanel" aria-labelledby="logTabDev" tabindex="0"></div>
+        <div class="logbook__panel" id="logPanelBirds" role="tabpanel" aria-labelledby="logTabBirds" tabindex="0" hidden></div>
     </div>
 </section>
 

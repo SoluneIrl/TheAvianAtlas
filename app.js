@@ -25,6 +25,7 @@
     const bgMusicEl         = document.getElementById('bgMusic');
     const heroEl            = document.querySelector('.hero');
     const heroImgEl         = document.querySelector('.hero__img');
+    const collectionEl      = document.getElementById('collection');
     const logTabBirdsEl     = document.getElementById('logTabBirds');
     const logTabDevEl       = document.getElementById('logTabDev');
     const logPanelBirdsEl   = document.getElementById('logPanelBirds');
@@ -39,7 +40,6 @@
     const pickerEl        = document.getElementById('gamePicker');
     const pickerBtnEl     = document.getElementById('gamePickerBtn');
     const pickerNameEl    = document.getElementById('gamePickerName');
-    const pickerCountEl   = document.getElementById('gamePickerCount');
     const sheetBackdropEl = document.getElementById('sheetBackdrop');
     const sheetCloseEl    = document.getElementById('sheetClose');
     const sheetTopEl      = document.getElementById('sheetTop');
@@ -57,21 +57,29 @@
     if (heroEl && heroImgEl
         && window.matchMedia('(hover: hover) and (pointer: fine)').matches
         && !prefersReducedMotion()) {
-        let parallaxRAF = null;
+        let targetX = 0, targetY = 0, currentX = 0, currentY = 0, parallaxRAF = 0;
+        const settle = () => {
+            currentX += (targetX - currentX) * 0.09;
+            currentY += (targetY - currentY) * 0.09;
+            heroImgEl.style.setProperty('--parallax-x', currentX.toFixed(2));
+            heroImgEl.style.setProperty('--parallax-y', currentY.toFixed(2));
+            if (Math.abs(targetX - currentX) > 0.02 || Math.abs(targetY - currentY) > 0.02) {
+                parallaxRAF = requestAnimationFrame(settle);
+            } else {
+                parallaxRAF = 0;
+            }
+        };
+        const kick = () => { if (!parallaxRAF) parallaxRAF = requestAnimationFrame(settle); };
         heroEl.addEventListener('mousemove', (e) => {
-            if (parallaxRAF) return;
-            parallaxRAF = requestAnimationFrame(() => {
-                parallaxRAF = null;
-                const rect = heroEl.getBoundingClientRect();
-                const px = ((e.clientX - rect.left) / rect.width - 0.5) * 2;  // -1..1
-                const py = ((e.clientY - rect.top) / rect.height - 0.5) * 2;  // -1..1
-                heroImgEl.style.setProperty('--parallax-x', (px * -10).toFixed(2));
-                heroImgEl.style.setProperty('--parallax-y', (py * -6).toFixed(2));
-            });
+            const rect = heroEl.getBoundingClientRect();
+            targetX = ((e.clientX - rect.left) / rect.width - 0.5) * 2 * -10;
+            targetY = ((e.clientY - rect.top) / rect.height - 0.5) * 2 * -6;
+            kick();
         });
         heroEl.addEventListener('mouseleave', () => {
-            heroImgEl.style.setProperty('--parallax-x', 0);
-            heroImgEl.style.setProperty('--parallax-y', 0);
+            targetX = 0;
+            targetY = 0;
+            kick();
         });
     }
 
@@ -141,14 +149,8 @@
         colorSplashTimeout = setTimeout(() => {
             colorSplashEl.classList.remove('is-active');
 
-            document.documentElement.classList.add('rave-reveal-snap');
             document.body.classList.remove('rave-hold');
             document.documentElement.classList.remove('rave-hold');
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    document.documentElement.classList.remove('rave-reveal-snap');
-                });
-            });
         }, 2600);
     }
 
@@ -185,13 +187,14 @@
         });
     }
 
+    const moodMix = accent => `color-mix(in oklch, ${accent}, var(--mood) calc(var(--mood-on) * 90%))`;
     const ACCENT_CYCLE = ['var(--color-accent-gold)', 'var(--color-accent-wine-bright)', 'var(--color-accent-umber)'];
     const PLACEHOLDER_ICON = `<img src="Assets/Resources/Default.png" alt=""/>`
     const USE_THUMBS = true;
     const GAMES_ROOT = 'Assets/Games';
-    const THUMBS_ROOT = 'Assets/Thumbs/1x';     // 480px  - grid cards
-    const THUMBS_2X_ROOT = 'Assets/Thumbs/2x';  // 960px  - grid cards on high-DPI screens
-    const MID_ROOT = 'Assets/Thumbs/3x';        // 1600px - lightbox
+    const THUMBS_ROOT = 'Assets/Thumbs/1x';
+    const THUMBS_2X_ROOT = 'Assets/Thumbs/2x';
+    const MID_ROOT = 'Assets/Thumbs/3x';
 
     function variantPathFor(root, fullPath) {
         if (!USE_THUMBS || !fullPath || !fullPath.startsWith(GAMES_ROOT + '/')) return '';
@@ -215,7 +218,6 @@
             const failedSrc = img.currentSrc || '';
             if (img.hasAttribute('srcset')) {
                 img.removeAttribute('srcset');
-                // Only the 2x file was missing: the plain 1x thumbnail is still worth a try.
                 if (bird.thumb2x && failedSrc.endsWith(bird.thumb2x)) return;
             }
             if (bird.thumb && bird.image && img.getAttribute('src') === bird.thumb) {
@@ -229,6 +231,7 @@
     }
 
     let gamesData = [];
+    const moodByGame = new Map();
     let devLogRows = [];
     let smileRows = [];
     let activeGameId = null;
@@ -293,7 +296,7 @@
         return resolveAssetPath(`Assets/Games/${gameName}`, image);
     }
 
-    const RESERVED_SLUGS = new Set(['top', 'collection', 'no-birds', 'logbook', 'smile', 'aboutme', 'about-me', 'lightbox']);
+    const RESERVED_SLUGS = new Set(['top', 'collection', 'no-birds', 'logbook', 'smile', 'about-me', 'lightbox']);
 
     function rowsToGames(rows, credits = {}) {
         const order = [];
@@ -528,7 +531,6 @@
         const activeGame = gamesData.find(g => g.id === activeGameId);
         if (activeGame && pickerNameEl) {
             pickerNameEl.textContent = activeGame.name;
-            if (pickerCountEl) pickerCountEl.textContent = activeGame.birds.length;
         }
     }
 
@@ -728,7 +730,7 @@
             const tilt = (i % 5 - 2) * 0.6;
             card.style.setProperty('--tilt', `${tilt}deg`);
             card.style.setProperty('--delay', `${Math.min((i - batchStart) * 35, 400)}ms`);
-            card.style.setProperty('--accent', gameAccents[i]);
+            card.style.setProperty('--accent', moodMix(gameAccents[i]));
             card.tabIndex = 0;
             card.setAttribute('role', 'button');
             card.setAttribute('aria-label', `View ${bird.title} full size`);
@@ -911,6 +913,7 @@
     let lightboxImgToken = 0;
     const PLACEHOLDER_FALLBACK_RATIO = 16 / 9;
     const BLANK_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+    const LIGHTBOX_FALLBACK_SRC = 'Assets/Resources/Default.png';
 
     function clearLightboxPlaceholder() {
         lightboxImgEl.classList.remove('is-placeholder');
@@ -937,7 +940,13 @@
         const pre = new Image();
         pre.src = full;
         pre.addEventListener('error', () => {
-            if (token === lightboxImgToken && full !== item.image) setLightboxImage(item, true);
+            if (token !== lightboxImgToken) return;
+            if (full !== item.image) {
+                setLightboxImage(item, true);
+                return;
+            }
+            clearLightboxPlaceholder();
+            lightboxImgEl.src = LIGHTBOX_FALLBACK_SRC;
         }, { once: true });
         if (pre.complete && pre.naturalWidth) {
             lightboxImgEl.src = full;
@@ -1204,7 +1213,7 @@
         if (sheetCloseEl) sheetCloseEl.addEventListener('click', () => closeSheet());
         if (sheetBackdropEl) sheetBackdropEl.addEventListener('click', () => closeSheet());
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && sheetOpen) closeSheet();
+            if (e.key === 'Escape' && sheetOpen && !e.defaultPrevented) closeSheet();
         });
 
         const onBreakpoint = () => {
@@ -1259,6 +1268,7 @@
         if (pendingBoardRender) { pendingBoardRender(); pendingBoardRender = null; }
 
         activeGameId = gameId;
+        applyMood(gamesData.find(g => g.id === gameId));
         updateSidebarActive();
 
         if (opts.scrollToBoard) {
@@ -1576,6 +1586,8 @@
         return html;
     }
 
+    const DEV_IMAGE_MAX_HEIGHT = 320;
+
     function renderDevLog(panelEl, items) {
         if (!panelEl) return;
         panelEl.innerHTML = '';
@@ -1611,11 +1623,29 @@
                 const imgEl = frameEl.querySelector('img');
                 if (!imgEl) return;
                 const lbItem = lightboxItems[++imageCursor];
+                const rowEl = frameEl.parentElement;
                 let imageFailed = false;
+
+                const capRowHeight = () => {
+                    const frames = Array.from(rowEl.children);
+                    if (!frames.length) return;
+                    let ratioSum = 0;
+                    for (const f of frames) {
+                        const r = Number(f.dataset.ratio);
+                        if (!(r > 0)) return;
+                        ratioSum += r;
+                    }
+                    const gap = parseFloat(getComputedStyle(rowEl).columnGap) || 0;
+                    const cap = DEV_IMAGE_MAX_HEIGHT * ratioSum + gap * (frames.length - 1);
+                    rowEl.style.setProperty('--row-cap', `${Math.round(cap)}px`);
+                };
 
                 const applyRatio = () => {
                     if (imgEl.naturalWidth && imgEl.naturalHeight) {
-                        frameEl.style.flexGrow = (imgEl.naturalWidth / imgEl.naturalHeight).toFixed(4);
+                        const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+                        frameEl.dataset.ratio = String(ratio);
+                        frameEl.style.flexGrow = ratio.toFixed(4);
+                        capRowHeight();
                     }
                 };
                 if (imgEl.complete) applyRatio();
@@ -1624,6 +1654,7 @@
                 imgEl.addEventListener('error', () => {
                     imageFailed = true;
                     frameEl.remove();
+                    capRowHeight();
 
                     const at = lightboxItems.indexOf(lbItem);
                     if (at !== -1) {
@@ -1676,6 +1707,8 @@
     function initLogbookTabs() {
         if (!logTabBirdsEl || !logTabDevEl || !logPanelBirdsEl || !logPanelDevEl) return;
 
+        const tabs = [logTabDevEl, logTabBirdsEl];
+
         function showTab(tab) {
             const showBirds = tab === 'birds';
             logPanelBirdsEl.hidden = !showBirds;
@@ -1684,11 +1717,32 @@
             logTabDevEl.classList.toggle('is-active', !showBirds);
             logTabBirdsEl.setAttribute('aria-selected', String(showBirds));
             logTabDevEl.setAttribute('aria-selected', String(!showBirds));
+            logTabBirdsEl.tabIndex = showBirds ? 0 : -1;
+            logTabDevEl.tabIndex = showBirds ? -1 : 0;
             if (showBirds) renderBirbLogIfNeeded();
         }
 
         logTabBirdsEl.addEventListener('click', () => showTab('birds'));
         logTabDevEl.addEventListener('click', () => showTab('dev'));
+
+        const tablistEl = logTabDevEl.parentElement;
+        tablistEl.addEventListener('keydown', (e) => {
+            const current = tabs.indexOf(e.target.closest('[role="tab"]'));
+            if (current === -1) return;
+            let next;
+            switch (e.key) {
+                case 'ArrowRight':
+                case 'ArrowDown': next = (current + 1) % tabs.length; break;
+                case 'ArrowLeft':
+                case 'ArrowUp':   next = (current - 1 + tabs.length) % tabs.length; break;
+                case 'Home':      next = 0; break;
+                case 'End':       next = tabs.length - 1; break;
+                default: return;
+            }
+            e.preventDefault();
+            showTab(next === 0 ? 'dev' : 'birds');
+            tabs[next].focus();
+        });
     }
     let NO_BIRDS_GAMES = [];
     function initNoBirds() {
@@ -1754,6 +1808,30 @@
         gamesData = rowsToGames(rows, creditMap);
     }
 
+    async function loadMoods() {
+        try {
+            const data = await fetchJSON('Data/moods.json');
+            if (!data || typeof data !== 'object' || Array.isArray(data)) return;
+            Object.entries(data).forEach(([name, value]) => {
+                const key = String(name).trim().toLowerCase();
+                const color = String(value ?? '').trim();
+                if (key && color && CSS.supports('color', color)) moodByGame.set(key, color);
+            });
+        } catch (_) {
+        }
+    }
+
+    function applyMood(game) {
+        if (!collectionEl) return;
+        const color = game ? moodByGame.get(game.name.trim().toLowerCase()) : '';
+        if (color) {
+            collectionEl.style.setProperty('--mood', color);
+            collectionEl.style.setProperty('--mood-on', '1');
+        } else {
+            collectionEl.style.setProperty('--mood-on', '0');
+        }
+    }
+
     async function loadNoBirds() {
         try {
             const rows = await fetchJSON('Data/nobirds.json');
@@ -1782,6 +1860,14 @@
         }
     }
 
+    const SMILE_STEP = 260 + 16;
+    let smileRenderedReps = 0;
+
+    function smileRepsNeeded() {
+        const target = Math.max(window.innerWidth, 1600) * 1.1;
+        return Math.max(1, Math.ceil(target / (smileRows.length * SMILE_STEP)));
+    }
+
     function renderSmile() {
         const sectionEl = document.getElementById('smile');
         const trackEl = document.getElementById('smileTrack');
@@ -1794,9 +1880,9 @@
             return;
         }
 
-        const STEP = 260 + 16;
-        const target = Math.max(window.innerWidth, 1600) * 1.1;
-        const reps = Math.max(1, Math.ceil(target / (smileRows.length * STEP)));
+        const STEP = SMILE_STEP;
+        const reps = smileRepsNeeded();
+        smileRenderedReps = reps;
 
         const shuffle = (arr) => {
             const a = arr.slice();
@@ -1854,6 +1940,14 @@
     let secretRendered = false;
     let secretLoad = null;
 
+    let smileResizeTimer = 0;
+    window.addEventListener('resize', () => {
+        clearTimeout(smileResizeTimer);
+        smileResizeTimer = setTimeout(() => {
+            if (secretRendered && smileRows.length && smileRepsNeeded() !== smileRenderedReps) renderSmile();
+        }, 200);
+    });
+
     function loadSecretData() {
         if (!secretLoad) secretLoad = Promise.all([loadDevLog(), loadSmile()]);
         return secretLoad;
@@ -1873,6 +1967,7 @@
 
         const birdsLoad   = loadBirds();
         const noBirdsLoad = loadNoBirds();
+        const moodsLoad = loadMoods();
 
         noBirdsLoad.then(initNoBirds);
 
@@ -1914,6 +2009,7 @@
                 boardGridEl.innerHTML = `<div class="board__empty">Nothing here yet, check back soon!</div>`;
                 if (boardSortLabelEl) boardSortLabelEl.hidden = true;
             } else {
+                await moodsLoad;
                 const hashId = safeDecode(location.hash.slice(1));
                 const startGame = gamesData.find(g => g.id === hashId) || gamesData[0];
                 selectGame(startGame.id, { updateHash: false });
@@ -2014,7 +2110,7 @@
                 case 'Enter':
                 case ' ':         e.preventDefault(); choose(activeIndex); break;
                 case 'Escape':    e.preventDefault(); closeMenu(true); break;
-                case 'Tab':       closeMenu(true); break;   // focus returns to the button, then Tab moves on from there
+                case 'Tab':       closeMenu(true); break;
                 default: break;
             }
         });
