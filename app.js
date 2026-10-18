@@ -187,7 +187,6 @@
         });
     }
 
-    const moodMix = accent => `color-mix(in oklch, ${accent}, var(--mood) calc(var(--mood-on) * 90%))`;
     const ACCENT_CYCLE = ['var(--color-accent-gold)', 'var(--color-accent-wine-bright)', 'var(--color-accent-umber)'];
     const PLACEHOLDER_ICON = `<img src="Assets/Resources/Default.png" alt=""/>`
     const USE_THUMBS = true;
@@ -231,7 +230,6 @@
     }
 
     let gamesData = [];
-    const moodByGame = new Map();
     let devLogRows = [];
     let smileRows = [];
     let activeGameId = null;
@@ -730,7 +728,7 @@
             const tilt = (i % 5 - 2) * 0.6;
             card.style.setProperty('--tilt', `${tilt}deg`);
             card.style.setProperty('--delay', `${Math.min((i - batchStart) * 35, 400)}ms`);
-            card.style.setProperty('--accent', moodMix(gameAccents[i]));
+            card.style.setProperty('--accent', gameAccents[i]);
             card.tabIndex = 0;
             card.setAttribute('role', 'button');
             card.setAttribute('aria-label', `View ${bird.title} full size`);
@@ -1268,7 +1266,6 @@
         if (pendingBoardRender) { pendingBoardRender(); pendingBoardRender = null; }
 
         activeGameId = gameId;
-        applyMood(gamesData.find(g => g.id === gameId));
         updateSidebarActive();
 
         if (opts.scrollToBoard) {
@@ -1808,30 +1805,6 @@
         gamesData = rowsToGames(rows, creditMap);
     }
 
-    async function loadMoods() {
-        try {
-            const data = await fetchJSON('Data/moods.json');
-            if (!data || typeof data !== 'object' || Array.isArray(data)) return;
-            Object.entries(data).forEach(([name, value]) => {
-                const key = String(name).trim().toLowerCase();
-                const color = String(value ?? '').trim();
-                if (key && color && CSS.supports('color', color)) moodByGame.set(key, color);
-            });
-        } catch (_) {
-        }
-    }
-
-    function applyMood(game) {
-        if (!collectionEl) return;
-        const color = game ? moodByGame.get(game.name.trim().toLowerCase()) : '';
-        if (color) {
-            collectionEl.style.setProperty('--mood', color);
-            collectionEl.style.setProperty('--mood-on', '1');
-        } else {
-            collectionEl.style.setProperty('--mood-on', '0');
-        }
-    }
-
     async function loadNoBirds() {
         try {
             const rows = await fetchJSON('Data/nobirds.json');
@@ -1967,7 +1940,6 @@
 
         const birdsLoad   = loadBirds();
         const noBirdsLoad = loadNoBirds();
-        const moodsLoad = loadMoods();
 
         noBirdsLoad.then(initNoBirds);
 
@@ -2009,7 +1981,6 @@
                 boardGridEl.innerHTML = `<div class="board__empty">Nothing here yet, check back soon!</div>`;
                 if (boardSortLabelEl) boardSortLabelEl.hidden = true;
             } else {
-                await moodsLoad;
                 const hashId = safeDecode(location.hash.slice(1));
                 const startGame = gamesData.find(g => g.id === hashId) || gamesData[0];
                 selectGame(startGame.id, { updateHash: false });

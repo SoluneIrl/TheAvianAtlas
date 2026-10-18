@@ -26,18 +26,6 @@
     --ease: cubic-bezier(0.22, 0.85, 0.28, 1);
 }
 
-@property --mood {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: #C6862F;
-}
-
-@property --mood-on {
-    syntax: '<number>';
-    inherits: true;
-    initial-value: 0;
-}
-
 html[data-daypart="golden"] {
     --color-page: #FBEFD9;
     --color-surface: #F5E6CC;
@@ -534,10 +522,6 @@ body::before {
     grid-template-columns: 260px 1fr;
     min-height: 100vh;
     min-height: 100dvh;
-    --mood-accent: color-mix(in oklch, var(--color-accent-gold), var(--mood) calc(var(--mood-on) * 100%));
-    --mood-accent-bright: color-mix(in oklch, var(--color-accent-gold-bright), var(--mood) calc(var(--mood-on) * 100%));
-    background: radial-gradient(ellipse 65% 45% at 85% 0%, color-mix(in srgb, var(--mood) calc(var(--mood-on) * 14%), transparent), transparent 70%);
-    transition: --mood 0.7s var(--ease), --mood-on 0.7s var(--ease);
 }
 
 .sidebar {
@@ -721,7 +705,7 @@ body::before {
     padding-left: calc(1.75rem - 2px);
 }
 
-.game-item.active .game-btn__index { color: var(--mood-accent-bright); }
+.game-item.active .game-btn__index { color: var(--color-accent-gold-bright); }
 
 .board {
     min-height: 100vh;
@@ -738,7 +722,7 @@ body::before {
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 0.5rem 1.5rem;
-    border-bottom: 1px solid color-mix(in oklch, var(--color-border), var(--mood) calc(var(--mood-on) * 55%));
+    border-bottom: 1px solid var(--color-border);
     padding-bottom: 1.25rem;
     margin-bottom: 2.25rem;
 }
@@ -768,7 +752,7 @@ body::before {
 .board__meta {
     font-family: var(--body);
     font-size: 0.82rem;
-    color: color-mix(in oklch, var(--color-accent-umber), var(--mood) calc(var(--mood-on) * 45%));
+    color: var(--color-accent-umber);
 }
 
 .board__header-right {
@@ -2762,8 +2746,8 @@ body.music-playing:not(.rave-hold) *::-webkit-scrollbar-thumb:hover {
     height: var(--ind-h, 0px);
     transform: translateY(var(--ind-y, 0px));
     opacity: var(--ind-o, 0);
-    background: color-mix(in srgb, var(--mood-accent) 14%, transparent);
-    border-left: 2px solid var(--mood-accent);
+    background: color-mix(in srgb, var(--color-accent-gold) 14%, transparent);
+    border-left: 2px solid var(--color-accent-gold);
     pointer-events: none;
     transition: transform 0.38s var(--ease), height 0.38s var(--ease), opacity 0.25s ease;
 }
