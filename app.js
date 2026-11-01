@@ -32,6 +32,22 @@
     const logPanelDevEl     = document.getElementById('logPanelDev');
     const lightboxFigureEl  = document.querySelector('.lightbox__figure');
     const lightboxCounterEl = document.getElementById('lightboxCounter');
+    const realboxEl          = document.getElementById('realbox');
+    const realboxCardEl      = document.getElementById('realboxCard');
+    const realboxCloseEl     = document.getElementById('realboxClose');
+    const realboxEyebrowEl   = document.getElementById('realboxEyebrow');
+    const realboxTitleEl     = document.getElementById('realboxTitle');
+    const realboxSpeciesEl   = document.getElementById('realboxSpecies');
+    const realboxGameFrameEl = document.getElementById('realboxGameFrame');
+    const realboxGameImgEl   = document.getElementById('realboxGameImg');
+    const realboxRealFrameEl = document.getElementById('realboxRealFrame');
+    const realboxRealImgEl   = document.getElementById('realboxRealImg');
+    const realboxPairEl      = document.getElementById('realboxPair');
+    const realboxNotesEl     = document.getElementById('realboxNotes');
+    const realboxFoundInEl   = document.getElementById('realboxFoundIn');
+    const realboxFoundInTextEl = document.getElementById('realboxFoundInText');
+    const realboxFunFactEl   = document.getElementById('realboxFunFact');
+    const realboxFunFactTextEl = document.getElementById('realboxFunFactText');
     const boardStickyEl      = document.getElementById('boardSticky');
     const boardStickyTitleEl = document.getElementById('boardStickyTitle');
     const boardStickyMetaEl  = document.getElementById('boardStickyMeta');
@@ -260,6 +276,7 @@
     let lightboxAccents = [];
     let lightboxIndex = -1;
     let lightboxTriggerEl = null;
+    let lightboxIsBoard = false;
     const DATA_VERSION = (document.querySelector('meta[name="data-version"]') || {}).content || '';
 
     async function fetchJSON(path, options) {
@@ -294,9 +311,24 @@
         return resolveAssetPath(`Assets/Games/${gameName}`, image);
     }
 
+    const REAL_ROOT = 'Assets/Real';
+
+    function normalizeReal(entry) {
+        if (!entry || typeof entry !== 'object') return null;
+        const image = resolveAssetPath(REAL_ROOT, String(entry.image ?? ''));
+        if (!image) return null;
+        const stem = String(entry.image ?? '').split('/').pop().replace(/\.[^.]+$/, '').trim();
+        return {
+            image,
+            species: stem,
+            foundIn: String(entry.found_in ?? '').trim(),
+            funFact: String(entry.fun_fact ?? '').trim()
+        };
+    }
+
     const RESERVED_SLUGS = new Set(['top', 'collection', 'no-birds', 'logbook', 'smile', 'about-me', 'lightbox']);
 
-    function rowsToGames(rows, credits = {}) {
+    function rowsToGames(rows, credits = {}, real = {}) {
         const order = [];
         const byName = new Map();
         const usedSlugs = new Set();
@@ -334,7 +366,8 @@
                 thumb2x: thumb2xPathFor(image),
                 mid: midPathFor(image),
                 credit: String((credits[gameName] || {})[String(r.image ?? '').trim()] ?? '').trim(),
-                date: String(r.date ?? '').trim()
+                date: String(r.date ?? '').trim(),
+                real: normalizeReal((real[gameName] || {})[String(r.image ?? '').trim()])
             });
         });
 
@@ -635,15 +668,21 @@
             birds.push(bird);
             accents.push(boardDisplayAccents[ci]);
         });
-        openLightboxAt(birds, accents, startAt);
+        openLightboxAt(birds, accents, startAt, true);
     }
 
     boardGridEl.addEventListener('click', (e) => {
+        const realBtn = e.target.closest('.specimen__real');
+        if (realBtn && boardGridEl.contains(realBtn)) {
+            openRealFromCard(realBtn.closest('.specimen'), realBtn, e);
+            return;
+        }
         const card = e.target.closest('.specimen');
         if (card && boardGridEl.contains(card)) openCard(card, e);
     });
     boardGridEl.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.target.closest('.specimen__real')) return;
         const card = e.target.closest('.specimen');
         if (!card || !boardGridEl.contains(card)) return;
         e.preventDefault();
@@ -738,7 +777,10 @@
         <div class="specimen__frame is-loading">
           <img src="${escapeHTML(bird.thumb || bird.image)}" ${srcsetAttr(bird)} alt="${escapeHTML(bird.title)}" loading="lazy" decoding="async" />
         </div>
-        <p class="specimen__id">${catalogNumber(gameIndex, bird.id)}</p>
+        <div class="specimen__meta">
+          <p class="specimen__id">${catalogNumber(gameIndex, bird.id)}</p>
+          ${bird.real ? `<button type="button" class="specimen__real" aria-label="${escapeHTML(`Compare ${bird.title} with the real bird`)}" title="Real-life match"></button>` : ''}
+        </div>
         <h3 class="specimen__title">${escapeHTML(bird.title)}</h3>
         ${bird.credit ? `<p class="specimen__credit"><span class="specimen__credit-name">${escapeHTML(bird.credit)}</span></p>` : ''}
       `;
@@ -828,7 +870,8 @@
     let lightboxSwitchToken = 0;
     let lightboxClosing = false;
 
-    function openLightboxAt(birds, accents, index) {
+    function openLightboxAt(birds, accents, index, isBoard) {
+        lightboxIsBoard = !!isBoard;
         lightboxSwitchToken++;
         lightboxClosing = false;
         if (lightboxEl) lightboxEl.classList.remove('is-closing');
@@ -897,6 +940,55 @@
 
             const reveal = () => {
                 if (token === lightboxSwitchToken) lightboxFigureEl.classList.remove('is-switching');
+            };
+            if (lightboxImgEl.complete && lightboxImgEl.naturalWidth) {
+                requestAnimationFrame(reveal);
+            } else {
+                lightboxImgEl.addEventListener('load', reveal, { once: true });
+                lightboxImgEl.addEventListener('error', reveal, { once: true });
+                setTimeout(reveal, 700);
+            }
+        }, LIGHTBOX_SWITCH_MS);
+    }
+
+    function showLightboxGameOffset(offset) {
+        const total = gamesData.length;
+        if (!lightboxIsBoard || lightboxClosing || total < 2) return;
+        const at = gamesData.findIndex(g => g.id === activeGameId);
+        if (at < 0) return;
+
+        let next = null;
+        for (let step = 1; step < total; step++) {
+            const candidate = gamesData[(((at + offset * step) % total) + total) % total];
+            if (candidate.birds.length) { next = candidate; break; }
+        }
+        if (!next) return;
+
+        selectGame(next.id);
+        lightboxBirds = boardDisplayBirds.slice();
+        lightboxAccents = boardDisplayAccents.slice();
+        lightboxIndex = 0;
+        lightboxTargetIndex = 0;
+
+        if (prefersReducedMotion() || !lightboxFigureEl) {
+            lightboxSwitchToken++;
+            renderLightboxCurrent();
+            return;
+        }
+
+        const token = ++lightboxSwitchToken;
+        lightboxFigureEl.style.setProperty('--shift', '0px');
+        lightboxFigureEl.style.setProperty('--shift-y', `${offset > 0 ? -14 : 14}px`);
+        lightboxFigureEl.classList.add('is-switching');
+
+        setTimeout(() => {
+            if (token !== lightboxSwitchToken || lightboxEl.hidden || lightboxClosing) return;
+            renderLightboxCurrent();
+
+            const reveal = () => {
+                if (token !== lightboxSwitchToken) return;
+                lightboxFigureEl.classList.remove('is-switching');
+                lightboxFigureEl.style.removeProperty('--shift-y');
             };
             if (lightboxImgEl.complete && lightboxImgEl.naturalWidth) {
                 requestAnimationFrame(reveal);
@@ -1063,6 +1155,8 @@
             if (e.key === 'Escape') { closeLightbox(); return; }
             if (e.key === 'ArrowLeft') { showLightboxOffset(-1); return; }
             if (e.key === 'ArrowRight') { showLightboxOffset(1); return; }
+            if (e.key === 'ArrowUp') { if (lightboxIsBoard) { e.preventDefault(); showLightboxGameOffset(-1); } return; }
+            if (e.key === 'ArrowDown') { if (lightboxIsBoard) { e.preventDefault(); showLightboxGameOffset(1); } return; }
 
             if (e.key === 'Tab') {
                 const focusable = [lightboxCloseEl, lightboxPrevEl, lightboxNextEl]
@@ -1077,6 +1171,212 @@
                     e.preventDefault();
                     first.focus();
                 }
+            }
+        });
+    }
+
+    let realboxTriggerEl = null;
+    let realboxClosing = false;
+
+    const REAL_MAX_HEIGHT = 330;
+
+    const REAL_FIT_MQ = window.matchMedia('(max-width: 780px), (max-height: 540px)');
+
+    const REAL_LANDSCAPE_MQ = window.matchMedia('(orientation: landscape) and (max-height: 540px)');
+
+    function clearRealSizes() {
+        [realboxGameFrameEl, realboxRealFrameEl].forEach(frame => {
+            frame.style.height = '';
+            frame.parentElement.style.width = '';
+        });
+    }
+
+    function layoutRealPair() {
+        if (!REAL_FIT_MQ.matches) {
+            delete realboxPairEl.dataset.layout;
+            clearRealSizes();
+            return;
+        }
+        const frames = [realboxGameFrameEl, realboxRealFrameEl];
+        const figs = frames.map(f => f.parentElement);
+        const ratios = figs.map(f => parseFloat(f.style.getPropertyValue('--r')));
+        realboxPairEl.dataset.layout = 'stack';
+        clearRealSizes();
+        if (ratios.some(r => !(r > 0))) return;
+
+        const W = realboxPairEl.clientWidth;
+        let H;
+        if (REAL_LANDSCAPE_MQ.matches) {
+            H = realboxPairEl.clientHeight;
+        } else {
+            const box = getComputedStyle(realboxEl);
+            const card = getComputedStyle(realboxCardEl);
+            const head = realboxCardEl.querySelector('.realbox__head');
+            const shown = [head, realboxPairEl, realboxNotesEl].filter(el => !el.hidden);
+            const boxH = realboxEl.clientHeight - parseFloat(box.paddingTop) - parseFloat(box.paddingBottom);
+            const used = parseFloat(card.paddingTop) + parseFloat(card.paddingBottom)
+                + (parseFloat(card.rowGap) || 0) * (shown.length - 1)
+                + head.offsetHeight + (realboxNotesEl.hidden ? 0 : realboxNotesEl.offsetHeight);
+            H = boxH - used;
+        }
+        if (!W || !(H > 0)) return;
+
+        const gap = parseFloat(getComputedStyle(realboxPairEl).gap) || 0;
+        const inset = (parseFloat(getComputedStyle(frames[0]).paddingLeft) || 0) * 2;
+        const cap = figs[0].querySelector('.realbox__cap');
+        const figGap = parseFloat(getComputedStyle(figs[0]).rowGap) || 0;
+        const extra = (cap ? cap.offsetHeight : 14) + figGap + inset;
+
+        const stackH = Math.max(0, H - gap - extra * 2);
+        const naturalSum = ratios.reduce((sum, r) => sum + (W - inset) / r, 0);
+        const k = Math.min(1, stackH / naturalSum);
+        const stackSizes = ratios.map(r => {
+            const h = ((W - inset) / r) * k;
+            return { w: h * r, h };
+        });
+
+        const sideH = Math.max(0, Math.min((W - gap - inset * 2) / (ratios[0] + ratios[1]), H - extra));
+        const sideSizes = ratios.map(r => ({ w: sideH * r, h: sideH }));
+
+        const areaOf = sizes => sizes.reduce((sum, z) => sum + z.w * z.h, 0);
+        const useSide = areaOf(sideSizes) > areaOf(stackSizes) * 1.05;
+        const sizes = useSide ? sideSizes : stackSizes;
+
+        realboxPairEl.dataset.layout = useSide ? 'side' : 'stack';
+        frames.forEach((frame, i) => {
+            frame.style.height = `${Math.floor(sizes[i].h + inset)}px`;
+            figs[i].style.width = `${Math.floor(sizes[i].w + inset)}px`;
+        });
+    }
+
+    function updateRealPairCap() {
+        if (REAL_FIT_MQ.matches) {
+            realboxPairEl.style.maxWidth = '';
+            layoutRealPair();
+            return;
+        }
+        delete realboxPairEl.dataset.layout;
+        const figs = [realboxGameFrameEl.parentElement, realboxRealFrameEl.parentElement];
+        const ratios = figs.map(f => parseFloat(f.style.getPropertyValue('--r')));
+        if (ratios.some(r => !(r > 0))) {
+            realboxPairEl.style.maxWidth = '';
+            return;
+        }
+        const gap = parseFloat(getComputedStyle(realboxPairEl).columnGap) || 0;
+        realboxPairEl.style.maxWidth = `${Math.round(REAL_MAX_HEIGHT * (ratios[0] + ratios[1]) + gap)}px`;
+    }
+
+    function setRealImage(imgEl, frameEl, sources, alt) {
+        const list = sources.filter(Boolean);
+        list.push(LIGHTBOX_FALLBACK_SRC);
+        const figEl = frameEl.parentElement;
+        let n = 0;
+        frameEl.classList.add('is-loading');
+        figEl.style.removeProperty('--r');
+        updateRealPairCap();
+        imgEl.onload = () => {
+            if (imgEl.naturalWidth && imgEl.naturalHeight) {
+                figEl.style.setProperty('--r', (imgEl.naturalWidth / imgEl.naturalHeight).toFixed(4));
+                updateRealPairCap();
+            }
+            frameEl.classList.remove('is-loading');
+        };
+        imgEl.onerror = () => {
+            n++;
+            if (n < list.length) {
+                imgEl.src = list[n];
+            } else {
+                imgEl.onerror = null;
+                frameEl.classList.remove('is-loading');
+            }
+        };
+        imgEl.alt = alt;
+        imgEl.src = list[0];
+    }
+
+    function openRealbox(bird, accent, catNo, triggerEl) {
+        if (!realboxEl || !bird || !bird.real) return;
+        const real = bird.real;
+        realboxClosing = false;
+        realboxEl.classList.remove('is-closing');
+        realboxTriggerEl = triggerEl || document.activeElement;
+
+        realboxEyebrowEl.textContent = catNo;
+        realboxTitleEl.textContent = bird.title;
+        realboxSpeciesEl.textContent = real.species;
+        realboxSpeciesEl.hidden = !real.species;
+        realboxFoundInTextEl.textContent = real.foundIn;
+        realboxFoundInEl.hidden = !real.foundIn;
+        realboxFunFactTextEl.textContent = real.funFact;
+        realboxFunFactEl.hidden = !real.funFact;
+        realboxNotesEl.hidden = !real.foundIn && !real.funFact;
+        if (accent) realboxCardEl.style.setProperty('--accent', accent);
+
+        setRealImage(realboxGameImgEl, realboxGameFrameEl, [lightboxSrcFor(bird), bird.image], `${bird.title} in the game`);
+        setRealImage(realboxRealImgEl, realboxRealFrameEl, [real.image], real.species ? `A real ${real.species}` : `The real-life bird that matches ${bird.title}`);
+
+        realboxCardEl.scrollTop = 0;
+        realboxEl.hidden = false;
+        updateRealPairCap();
+        document.body.style.overflow = 'hidden';
+        realboxCloseEl.focus({ preventScroll: true });
+    }
+
+    function openRealFromCard(card, triggerEl, e) {
+        if (!card) return;
+        const i = Number(card.dataset.i);
+        const bird = boardDisplayBirds[i];
+        const game = gamesData.find(g => g.id === activeGameId);
+        if (!bird || !game) return;
+        const pt = clickPoint(e, triggerEl);
+        spawnConfetti(pt.x, pt.y);
+        openRealbox(bird, boardDisplayAccents[i], catalogNumber(game.index, bird.id), triggerEl);
+    }
+
+    function closeRealbox() {
+        if (!realboxEl || realboxEl.hidden || realboxClosing) return;
+
+        const finalize = () => {
+            if (!realboxClosing) return;
+            realboxClosing = false;
+            realboxEl.classList.remove('is-closing');
+            realboxEl.hidden = true;
+            [realboxGameImgEl, realboxRealImgEl].forEach(img => {
+                img.onload = img.onerror = null;
+                img.removeAttribute('src');
+            });
+            document.body.style.overflow = '';
+            if (realboxTriggerEl && document.contains(realboxTriggerEl)) {
+                realboxTriggerEl.focus({ preventScroll: true });
+            }
+            realboxTriggerEl = null;
+            scheduleStickyUpdate();
+        };
+
+        realboxClosing = true;
+        if (prefersReducedMotion()) {
+            finalize();
+            return;
+        }
+        realboxEl.classList.add('is-closing');
+        setTimeout(finalize, LIGHTBOX_CLOSE_MS);
+    }
+
+    if (realboxEl) {
+        window.addEventListener('resize', () => { if (!realboxEl.hidden) updateRealPairCap(); });
+        realboxCloseEl.addEventListener('click', closeRealbox);
+        realboxEl.addEventListener('click', (e) => {
+            if (e.target === realboxEl) closeRealbox();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (realboxEl.hidden || realboxClosing) return;
+            if (e.key === 'Escape') { e.preventDefault(); closeRealbox(); return; }
+            if (e.key === 'Tab') {
+                const focusable = [realboxCloseEl, realboxCardEl];
+                const at = focusable.indexOf(document.activeElement);
+                e.preventDefault();
+                const next = e.shiftKey ? (at <= 0 ? focusable.length - 1 : at - 1) : (at + 1) % focusable.length;
+                focusable[next].focus({ preventScroll: true });
             }
         });
     }
@@ -1795,14 +2095,43 @@
         }
     }
 
+    function buildRealMap(real) {
+        if (!Array.isArray(real)) {
+            return real && typeof real === 'object' ? real : {};
+        }
+        const map = {};
+        real.forEach(entry => {
+            if (!entry || typeof entry !== 'object' || !Array.isArray(entry.games)) return;
+            entry.games.forEach(match => {
+                if (!match || typeof match !== 'object') return;
+                const game = String(match.game ?? '').trim();
+                if (!game) return;
+                const images = Array.isArray(match.images) ? match.images : [match.image];
+                images.forEach(img => {
+                    const image = String(img ?? '').trim();
+                    if (!image) return;
+                    if (!map[game]) map[game] = {};
+                    map[game][image] = {
+                        image: entry.image,
+                        found_in: entry.found_in,
+                        fun_fact: entry.fun_fact
+                    };
+                });
+            });
+        });
+        return map;
+    }
+
     async function loadBirds() {
-        const [rows, credits] = await Promise.all([
+        const [rows, credits, real] = await Promise.all([
             fetchJSON('Data/birds.json'),
-            fetchJSON('Data/credits.json').catch(err => { console.error(err); return {}; })
+            fetchJSON('Data/credits.json').catch(err => { console.error(err); return {}; }),
+            fetchJSON('Data/real.json').catch(err => { console.error(err); return {}; })
         ]);
         if (!Array.isArray(rows)) throw new Error('birds.json should be an array of bird entries');
         const creditMap = credits && typeof credits === 'object' && !Array.isArray(credits) ? credits : {};
-        gamesData = rowsToGames(rows, creditMap);
+        const realMap = buildRealMap(real);
+        gamesData = rowsToGames(rows, creditMap, realMap);
     }
 
     async function loadNoBirds() {

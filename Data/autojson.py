@@ -17,6 +17,7 @@ DATA_DIR = Path(__file__).resolve().parent
 ROOT = DATA_DIR.parent
 GAMES_DIR = ROOT / "Assets" / "Games"
 DEV_DIR = ROOT / "Assets" / "Dev"
+REAL_DIR = ROOT / "Assets" / "Real"
 THUMBS_ROOT = ROOT / "Assets" / "Thumbs"
 THUMBS_1X_DIR = THUMBS_ROOT / "1x"
 THUMBS_2X_DIR = THUMBS_ROOT / "2x"
@@ -24,6 +25,7 @@ THUMBS_3X_DIR = THUMBS_ROOT / "3x"
 BIRDS_JSON = DATA_DIR / "birds.json"
 DEV_JSON = DATA_DIR / "dev.json"
 CREDITS_JSON = DATA_DIR / "credits.json"
+REAL_JSON = DATA_DIR / "real.json"
 SITEMAP = ROOT / "sitemap.xml"
 INDEX_HTML = ROOT / "index.html"
 APP_JS = ROOT / "app.js"
@@ -224,6 +226,83 @@ def rebuild_birds_json():
         for g, img, c in orphans:
             print(f"    - {g} / {img}  ({c})")
     return changed
+
+def webp_hint(folder, name):
+    stem = os.path.splitext(name)[0]
+    return f" - did you mean {stem}.webp?" if (folder / (stem + ".webp")).is_file() else ""
+
+
+def check_real_json():
+    if not REAL_JSON.is_file():
+        return
+    try:
+        with open(REAL_JSON, "r", encoding="utf-8-sig") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as exc:
+        print(f"Heads up - couldn't parse {REAL_JSON.name}: {exc}")
+        return
+    if isinstance(data, dict):
+        check_real_json_legacy(data)
+        return
+    if not isinstance(data, list):
+        print(f'Heads up - {REAL_JSON.name} should be a list like [{{"image": "...", "found_in": "...", "fun_fact": "...", "games": [{{"game": "...", "images": ["..."]}}]}}]')
+        return
+
+    problems, count, seen = [], 0, set()
+    for n, entry in enumerate(data, start=1):
+        if not isinstance(entry, dict):
+            problems.append(f"entry #{n}: should be an object")
+            continue
+        real = text_of(entry.get("image"))
+        label = real or f"entry #{n}"
+        if not real:
+            problems.append(f"{label}: missing \"image\" (the real-life photo)")
+        elif not (REAL_DIR / real).is_file():
+            problems.append(f"{label}: Assets/Real/{real} not found{webp_hint(REAL_DIR, real)}")
+        games = entry.get("games")
+        if not isinstance(games, list) or not games:
+            problems.append(f"{label}: \"games\" should be a list of {{\"game\": ..., \"images\": [...]}} matches")
+            continue
+        for match in games:
+            game = text_of(match.get("game")) if isinstance(match, dict) else ""
+            raw = match.get("images", match.get("image")) if isinstance(match, dict) else None
+            imgs = [text_of(i) for i in (raw if isinstance(raw, list) else [raw])]
+            imgs = [i for i in imgs if i]
+            if not game or not imgs:
+                problems.append(f"{label}: every match needs a \"game\" and an \"images\" list")
+                continue
+            for img in imgs:
+                count += 1
+                if (game, img) in seen:
+                    problems.append(f"{game} / {img}: listed more than once")
+                seen.add((game, img))
+                if not (GAMES_DIR / game / img).is_file():
+                    problems.append(f"{label}: {game} / {img} - no such bird image in Assets/Games{webp_hint(GAMES_DIR / game, img)}")
+    print(f"real.json checked: {len(data)} real bird(s), {count} match(es)" + (f", {len(problems)} problem(s):" if problems else ", all good."))
+    for p in problems:
+        print(f"  - {p}")
+
+
+def check_real_json_legacy(data):
+    problems, count = [], 0
+    for game, entries in data.items():
+        if not isinstance(entries, dict):
+            problems.append(f"{game}: should map image names to entries")
+            continue
+        for img, entry in entries.items():
+            count += 1
+            if not (GAMES_DIR / game / img).is_file():
+                problems.append(f"{game} / {img}: no such bird image in Assets/Games")
+            real = text_of(entry.get("image")) if isinstance(entry, dict) else ""
+            if not real:
+                problems.append(f"{game} / {img}: missing \"image\" (the real-life photo)")
+                continue
+            if not (REAL_DIR / real).is_file():
+                problems.append(f"{game} / {img}: Assets/Real/{real} not found{webp_hint(REAL_DIR, real)}")
+    print(f"real.json checked: {count} real-life match(es)" + (f", {len(problems)} problem(s):" if problems else ", all good."))
+    for p in problems:
+        print(f"  - {p}")
+
 
 def as_list(value):
     """An `img` value as a clean list (accepts a JSON list or an old 'a | b' string)."""
@@ -453,7 +532,7 @@ def main():
     print()
     if not args.skip_convert:
         total, skipped = 0, []
-        folders = [DEV_DIR]
+        folders = [DEV_DIR, REAL_DIR]
         if GAMES_DIR.is_dir():
             folders += sorted(p for p in GAMES_DIR.iterdir() if p.is_dir())
         for folder in folders:
@@ -472,6 +551,8 @@ def main():
         site_changed |= bool(rebuild_birds_json())
         print()
         site_changed |= bool(update_dev_json())
+        print()
+        check_real_json()
         print()
 
     ok = True
