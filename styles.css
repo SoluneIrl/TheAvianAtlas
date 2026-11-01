@@ -4143,15 +4143,6 @@ button, a, [role="button"] { touch-action: manipulation; }
     line-height: 1.2;
 }
 
-.realbox__species {
-    margin: 0.25rem 0 0;
-    font-family: var(--display);
-    font-style: italic;
-    font-size: 1rem;
-    color: var(--text-secondary);
-}
-
-.realbox__species[hidden],
 .realbox__notes[hidden],
 .realbox__note[hidden] { display: none; }
 
@@ -4267,7 +4258,6 @@ button, a, [role="button"] { touch-action: manipulation; }
     .realbox__head { flex: none; margin: 0; padding: 0; }
     .realbox__eyebrow { margin-bottom: 0.1rem; font-size: 0.62rem; }
     .realbox__title { font-size: 1.25rem; line-height: 1.15; }
-    .realbox__species { margin-top: 0.1rem; font-size: 0.88rem; }
 
     .realbox__pair {
         flex: none;

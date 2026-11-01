@@ -8,7 +8,7 @@
       "- So yeah :D, I was already having more fun with this idea than I would have imagined, the chaos, the cuteness, the community aspect of everyone finding birbs, it all made sense!!"
     ],
     "img": [
-      "1.webp"
+      "1.0.webp"
     ]
   },
   {
@@ -153,5 +153,14 @@
       "- Added different themes according to what time you visit, quite subtle >:)"
     ],
     "img": []
+  },
+  {
+    "date": "2026-11-02",
+    "text": [
+      "- Now you can view in game birbs to their irl counterparts | - This feature was suggested to me many months ago by Frenetic_Platypus, and I love it! :D"
+    ],
+    "img": [
+      "3.0.webp"
+    ]
   }
 ]

@@ -37,7 +37,6 @@
     const realboxCloseEl     = document.getElementById('realboxClose');
     const realboxEyebrowEl   = document.getElementById('realboxEyebrow');
     const realboxTitleEl     = document.getElementById('realboxTitle');
-    const realboxSpeciesEl   = document.getElementById('realboxSpecies');
     const realboxGameFrameEl = document.getElementById('realboxGameFrame');
     const realboxGameImgEl   = document.getElementById('realboxGameImg');
     const realboxRealFrameEl = document.getElementById('realboxRealFrame');
@@ -1302,9 +1301,7 @@
         realboxTriggerEl = triggerEl || document.activeElement;
 
         realboxEyebrowEl.textContent = catNo;
-        realboxTitleEl.textContent = bird.title;
-        realboxSpeciesEl.textContent = real.species;
-        realboxSpeciesEl.hidden = !real.species;
+        realboxTitleEl.textContent = real.species || bird.title;
         realboxFoundInTextEl.textContent = real.foundIn;
         realboxFoundInEl.hidden = !real.foundIn;
         realboxFunFactTextEl.textContent = real.funFact;
