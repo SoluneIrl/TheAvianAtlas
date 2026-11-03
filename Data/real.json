@@ -497,7 +497,8 @@
       {
         "game": "Terraria",
         "images": [
-          "Mallard Duck.webp","Mallard Duck Terrarium.webp"
+          "Mallard Duck.webp",
+          "Mallard Duck Terrarium.webp"
         ]
       }
     ]
@@ -792,6 +793,71 @@
         "game": "Super Auto Pets",
         "images": [
           "White-Bellied Heron.webp"
+        ]
+      }
+    ]
+  },
+  {
+    "image": "Black Hornbill.webp",
+    "found_in": "Southeast Asian forests, including the Malay Peninsula, Sumatra and Borneo",
+    "fun_fact": "Its casque is much smaller than the prominent casque of many other hornbills.",
+    "games": [
+      {
+        "game": "Gibbon Beyond The Trees",
+        "images": [
+          "Black Hornbill.webp"
+        ]
+      }
+    ]
+  },
+  {
+    "image": "Blue-and-yellow Macaw.webp",
+    "found_in": "Central and South America",
+    "fun_fact": "Its powerful beak can crack very hard nuts and seeds.",
+    "games": [
+      {
+        "game": "Gibbon Beyond The Trees",
+        "images": [
+          "Blue Parrot.webp"
+        ]
+      }
+    ]
+  },
+  {
+    "image": "Scarlet Macaw.webp",
+    "found_in": "Central and South America",
+    "fun_fact": "Its bright red, yellow and blue plumage makes it one of the most recognizable macaws.",
+    "games": [
+      {
+        "game": "Gibbon Beyond The Trees",
+        "images": [
+          "Red Parrot.webp"
+        ]
+      }
+    ]
+  },
+  {
+    "image": "White-crowned Hornbill.webp",
+    "found_in": "Sundaic forests of the Malay Peninsula, Sumatra and Borneo",
+    "fun_fact": "The male has a striking white head and crest, while the female is mostly black.",
+    "games": [
+      {
+        "game": "Gibbon Beyond The Trees",
+        "images": [
+          "White Hornbill.webp"
+        ]
+      }
+    ]
+  },
+  {
+    "image": "Blyth's Hawk-Eagle.webp",
+    "found_in": "Southeast Asian forests, including the Malay Peninsula, Sumatra and Borneo",
+    "fun_fact": "A forest-dwelling raptor that hunts birds and small mammals, often using surprise attacks through the trees.",
+    "games": [
+      {
+        "game": "Gibbon Beyond The Trees",
+        "images": [
+          "Hawk-Eagle.webp"
         ]
       }
     ]
